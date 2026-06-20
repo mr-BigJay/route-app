@@ -582,7 +582,8 @@ class DatabaseManager:
                    missions.mission_date, missions.mission_time,
                    missions.origin, missions.destination, missions.distance,
                    missions.passengers, missions.description,
-                   COALESCE(drivers.full_name, 'حذف شده') AS driver_name
+                   COALESCE(drivers.full_name, 'حذف شده') AS driver_name,
+                   COALESCE(drivers.distance_rate, 0) AS driver_distance_rate
             FROM missions
             LEFT JOIN drivers ON drivers.id = missions.driver_id
             {where}
