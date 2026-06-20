@@ -18,7 +18,17 @@ from PySide6.QtWidgets import (
 )
 
 from database.db import DatabaseManager
-from ui.utils import PRIMARY_COLOR, SUCCESS_COLOR, Page, gregorian_to_jalali, make_stat_card, show_error, show_success
+from ui.utils import (
+    PRIMARY_COLOR,
+    SUCCESS_COLOR,
+    Page,
+    gregorian_to_jalali,
+    make_stat_card,
+    show_error,
+    show_success,
+    to_english_digits,
+    to_persian_digits,
+)
 
 
 class ReportsPage(Page):
@@ -43,9 +53,9 @@ class ReportsPage(Page):
         self.report_type_combo.addItems(
             ["گزارش روزانه", "گزارش ماهانه", "گزارش راننده", "گزارش مقصد", "همه ماموریت‌ها"]
         )
-        self.date_input = QLineEdit(gregorian_to_jalali())
+        self.date_input = QLineEdit(to_persian_digits(gregorian_to_jalali()))
         self.date_input.setPlaceholderText("1403/11/20")
-        self.month_input = QLineEdit(gregorian_to_jalali()[:7])
+        self.month_input = QLineEdit(to_persian_digits(gregorian_to_jalali()[:7]))
         self.month_input.setPlaceholderText("1403/11")
         self.driver_combo = QComboBox()
         self.destination_combo = QComboBox()
@@ -109,9 +119,9 @@ class ReportsPage(Page):
         report_type = self.report_type_combo.currentText()
         filters: dict = {}
         if report_type == "گزارش روزانه":
-            filters["mission_date"] = self.date_input.text().strip()
+            filters["mission_date"] = to_english_digits(self.date_input.text().strip())
         elif report_type == "گزارش ماهانه":
-            filters["month"] = self.month_input.text().strip()
+            filters["month"] = to_english_digits(self.month_input.text().strip())
         elif report_type == "گزارش راننده":
             filters["driver_id"] = self.driver_combo.currentData()
         elif report_type == "گزارش مقصد":
@@ -146,18 +156,18 @@ class ReportsPage(Page):
         self.table.setRowCount(len(self.report_rows))
         for row, mission in enumerate(self.report_rows):
             values = [
-                row + 1,
-                mission["mission_date"],
-                mission["mission_time"],
+                to_persian_digits(row + 1),
+                to_persian_digits(mission["mission_date"]),
+                to_persian_digits(mission["mission_time"]),
                 mission["driver_name"],
                 mission["vehicle"],
                 mission["origin"],
                 mission["destination"],
-                f"{float(mission['distance']):.1f}",
+                to_persian_digits(f"{float(mission['distance']):.1f}"),
                 mission["description"] or "",
             ]
             for col, value in enumerate(values):
-                item = QTableWidgetItem(str(value))
+                item = QTableWidgetItem(to_persian_digits(value))
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 self.table.setItem(row, col, item)
 

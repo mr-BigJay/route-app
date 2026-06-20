@@ -20,6 +20,16 @@ APP_VERSION = "1.0.0"
 PRIMARY_COLOR = "#2563EB"
 SUCCESS_COLOR = "#22C55E"
 BACKGROUND_COLOR = "#F8FAFC"
+PERSIAN_DIGITS = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+ENGLISH_DIGITS = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
+
+
+def to_persian_digits(value: object) -> str:
+    return str(value).translate(PERSIAN_DIGITS)
+
+
+def to_english_digits(value: object) -> str:
+    return str(value).translate(ENGLISH_DIGITS)
 
 
 def gregorian_to_jalali(g_date: date | None = None) -> str:
@@ -149,6 +159,7 @@ def make_stat_card(title: str, value: str, accent: str = PRIMARY_COLOR) -> QFram
     title_label = QLabel(title)
     title_label.setObjectName("statTitle")
     value_label = QLabel(value)
+    value_label.setText(to_persian_digits(value))
     value_label.setObjectName("statValue")
     accent_bar = QFrame()
     accent_bar.setFixedHeight(4)

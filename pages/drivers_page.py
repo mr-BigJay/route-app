@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
 )
 
 from database.db import DatabaseError, DatabaseManager
-from ui.utils import Page, confirm, show_error, show_success
+from ui.utils import Page, confirm, show_error, show_success, to_english_digits, to_persian_digits
 
 
 PERSIAN_TEXT_RE = re.compile(r"^[\u0600-\u06FF\s‌]+$")
@@ -292,7 +292,7 @@ class DriversPage(Page):
             values = [
                 driver["first_name"],
                 driver["last_name"],
-                driver["mobile"],
+                to_persian_digits(driver["mobile"]),
                 driver["car_model"],
                 "فعال" if int(driver.get("is_active", 1)) else "غیرفعال",
             ]
@@ -313,9 +313,9 @@ class DriversPage(Page):
             "last_name": self.last_name_input.text().strip(),
             "mobile": self._normalize_digits(self.mobile_input.text().strip()),
             "national_id": self._normalize_digits(self.national_id_input.text().strip()),
-            "birth_date": self.birth_date_input.text().strip(),
+            "birth_date": to_english_digits(self.birth_date_input.text().strip()),
             "car_model": self.car_model_input.text().strip(),
-            "car_year": self.car_year_input.text().strip(),
+            "car_year": to_english_digits(self.car_year_input.text().strip()),
             "car_color": self.car_color_input.text().strip(),
             "distance_rate": self._plain_number(self.distance_rate_input.text()),
         }
@@ -384,11 +384,11 @@ class DriversPage(Page):
         self.save_button.setText("ذخیره تغییرات")
         self.first_name_input.setText(driver["first_name"])
         self.last_name_input.setText(driver["last_name"])
-        self.mobile_input.setText(driver["mobile"])
-        self.national_id_input.setText(driver["national_id"])
-        self.birth_date_input.setText(driver["birth_date"])
+        self.mobile_input.setText(to_persian_digits(driver["mobile"]))
+        self.national_id_input.setText(to_persian_digits(driver["national_id"]))
+        self.birth_date_input.setText(to_persian_digits(driver["birth_date"]))
         self.car_model_input.setText(driver["car_model"])
-        self.car_year_input.setText(driver["car_year"])
+        self.car_year_input.setText(to_persian_digits(driver["car_year"]))
         self.car_color_input.setText(driver["car_color"])
         self.distance_rate_input.setText(self._format_number(driver["distance_rate"]))
         self.stack.setCurrentIndex(self.FORM_VIEW)
@@ -588,13 +588,13 @@ class DriversPage(Page):
                     "اطلاعات فردی",
                     f"نام: {driver['first_name']}",
                     f"نام خانوادگی: {driver['last_name']}",
-                    f"شماره موبایل: {driver['mobile']}",
-                    f"شماره ملی: {driver['national_id']}",
-                    f"تاریخ تولد: {driver['birth_date']}",
+                    f"شماره موبایل: {to_persian_digits(driver['mobile'])}",
+                    f"شماره ملی: {to_persian_digits(driver['national_id'])}",
+                    f"تاریخ تولد: {to_persian_digits(driver['birth_date'])}",
                     "",
                     "اطلاعات خودرو",
                     f"مدل ماشین: {driver['car_model']}",
-                    f"سال تولید ماشین: {driver['car_year']}",
+                    f"سال تولید ماشین: {to_persian_digits(driver['car_year'])}",
                     f"رنگ ماشین: {driver['car_color']}",
                     f"نرخ محاسبه: {self._format_rial(driver['distance_rate'])}",
                     f"وضعیت: {status}",
@@ -642,7 +642,7 @@ class DriversPage(Page):
 
     def _refresh_active_count(self) -> None:
         active_count = sum(1 for driver in self.db.list_drivers() if int(driver.get("is_active", 1)))
-        self.active_count_label.setText(f"تعداد رانندگان فعال: {active_count}")
+        self.active_count_label.setText(f"تعداد رانندگان فعال: {to_persian_digits(active_count)}")
 
     def clear_form(self) -> None:
         for line_edit in [
@@ -662,14 +662,14 @@ class DriversPage(Page):
         if self._formatting_birth_date:
             return
         self._formatting_birth_date = True
-        digits = "".join(ch for ch in text if ch.isdigit())[:8]
+        digits = "".join(ch for ch in to_english_digits(text) if ch.isdigit())[:8]
         if len(digits) <= 4:
             formatted = digits
         elif len(digits) <= 6:
             formatted = f"{digits[:4]}/{digits[4:]}"
         else:
             formatted = f"{digits[:4]}/{digits[4:6]}/{digits[6:]}"
-        self.birth_date_input.setText(formatted)
+        self.birth_date_input.setText(to_persian_digits(formatted))
         self.birth_date_input.setCursorPosition(len(formatted))
         self._formatting_birth_date = False
 
@@ -710,14 +710,14 @@ class DriversPage(Page):
     @staticmethod
     def _normalize_digits(value: str) -> str:
         translation = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
-        return value.translate(translation)
+        return to_english_digits(value)
 
     @staticmethod
     def _format_number(value: int | float | str) -> str:
         number = DriversPage._plain_number(value)
-        return f"{number:,}" if number else ""
+        return to_persian_digits(f"{number:,}") if number else ""
 
     @staticmethod
     def _format_rial(value: int | float | str) -> str:
         number = DriversPage._plain_number(value)
-        return f"{number:,} ریال" if number else "0 ریال"
+        return f"{to_persian_digits(f'{number:,}')} ریال" if number else "۰ ریال"

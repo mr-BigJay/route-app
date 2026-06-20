@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from database.db import DB_PATH, DatabaseManager
-from ui.utils import PRIMARY_COLOR, SUCCESS_COLOR, Page, gregorian_to_jalali, make_stat_card
+from ui.utils import PRIMARY_COLOR, SUCCESS_COLOR, Page, gregorian_to_jalali, make_stat_card, to_persian_digits
 
 
 class DashboardPage(Page):
@@ -71,7 +71,7 @@ class DashboardPage(Page):
         self._refresh_recent()
         db_exists = Path(DB_PATH).exists()
         self.db_status_label.setText("پایگاه داده: فعال" if db_exists else "پایگاه داده: آماده ایجاد")
-        self.today_label.setText(f"تاریخ امروز: {gregorian_to_jalali()}")
+        self.today_label.setText(f"تاریخ امروز: {to_persian_digits(gregorian_to_jalali())}")
         self.db_path_label.setText(f"مسیر فایل: {DB_PATH}")
 
     def _refresh_stats(self) -> None:
@@ -96,13 +96,13 @@ class DashboardPage(Page):
         self.table.setRowCount(len(missions))
         for row, mission in enumerate(missions):
             values = [
-                str(row + 1),
-                mission["mission_date"],
+                to_persian_digits(row + 1),
+                to_persian_digits(mission["mission_date"]),
                 mission["driver_name"],
                 mission["vehicle"],
                 f"{mission['origin']} ← {mission['destination']}",
-                f"{float(mission['distance']):.1f}",
-                mission["mission_time"],
+                to_persian_digits(f"{float(mission['distance']):.1f}"),
+                to_persian_digits(mission["mission_time"]),
             ]
             for col, value in enumerate(values):
                 item = QTableWidgetItem(value)

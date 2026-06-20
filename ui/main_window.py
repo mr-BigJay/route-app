@@ -21,7 +21,7 @@ from pages.drivers_page import DriversPage
 from pages.locations_page import LocationsPage
 from pages.missions_page import MissionsPage
 from pages.reports_page import ReportsPage
-from ui.utils import APP_VERSION, current_time_text, gregorian_to_jalali
+from ui.utils import APP_VERSION, current_time_text, gregorian_to_jalali, to_persian_digits
 
 
 class MainWindow(QMainWindow):
@@ -45,11 +45,13 @@ class MainWindow(QMainWindow):
             self.stack.addWidget(page)
 
         central = QWidget()
+        central.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         main_layout = QHBoxLayout(central)
+        main_layout.setDirection(QHBoxLayout.Direction.RightToLeft)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
-        main_layout.addWidget(self.stack, stretch=1)
         main_layout.addWidget(self._build_sidebar())
+        main_layout.addWidget(self.stack, stretch=1)
         self.setCentralWidget(central)
         self._build_status_bar()
         self._select_page(0)
@@ -88,8 +90,8 @@ class MainWindow(QMainWindow):
             layout.addWidget(button)
 
         layout.addStretch(1)
-        self.date_label = QLabel(gregorian_to_jalali())
-        self.time_label = QLabel(current_time_text())
+        self.date_label = QLabel(to_persian_digits(gregorian_to_jalali()))
+        self.time_label = QLabel(to_persian_digits(current_time_text()))
         date_card = QFrame()
         date_card.setObjectName("dateCard")
         date_layout = QVBoxLayout(date_card)
@@ -108,7 +110,7 @@ class MainWindow(QMainWindow):
         status = QStatusBar()
         status.setObjectName("statusBar")
         db_state = "متصل" if Path(DB_PATH).exists() else "در حال ایجاد"
-        status.addPermanentWidget(QLabel(f"نسخه {APP_VERSION}"))
+        status.addPermanentWidget(QLabel(f"نسخه {to_persian_digits(APP_VERSION)}"))
         status.addPermanentWidget(QLabel("کاربر: مدیر سیستم"))
         status.addWidget(QLabel(f"وضعیت پایگاه داده محلی: {db_state}"))
         self.setStatusBar(status)
@@ -125,5 +127,5 @@ class MainWindow(QMainWindow):
             page.refresh()
 
     def _tick(self) -> None:
-        self.date_label.setText(gregorian_to_jalali())
-        self.time_label.setText(current_time_text())
+        self.date_label.setText(to_persian_digits(gregorian_to_jalali()))
+        self.time_label.setText(to_persian_digits(current_time_text()))

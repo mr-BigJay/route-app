@@ -29,7 +29,17 @@ from PySide6.QtWidgets import (
 )
 
 from database.db import DatabaseError, DatabaseManager
-from ui.utils import Page, confirm, current_time_text, gregorian_to_jalali, make_stat_card, show_error, show_success
+from ui.utils import (
+    Page,
+    confirm,
+    current_time_text,
+    gregorian_to_jalali,
+    make_stat_card,
+    show_error,
+    show_success,
+    to_english_digits,
+    to_persian_digits,
+)
 
 
 DATE_RE = re.compile(r"^\d{4}/\d{2}/\d{2}$")
@@ -332,11 +342,11 @@ class MissionsPage(Page):
             values: list[str] = []
             for column in columns:
                 if column == "row":
-                    values.append(str(row_index + 1))
+                    values.append(to_persian_digits(row_index + 1))
                 elif column == "distance":
-                    values.append(f"{float(mission['distance'] or 0):.1f}")
+                    values.append(to_persian_digits(f"{float(mission['distance'] or 0):.1f}"))
                 else:
-                    values.append(str(mission.get(column) or ""))
+                    values.append(to_persian_digits(mission.get(column) or ""))
             for col, value in enumerate(values):
                 item = QTableWidgetItem(value)
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -364,7 +374,7 @@ class MissionsPage(Page):
         combo.blockSignals(True)
         combo.clear()
         for category in self.db.list_categories():
-            combo.addItem(f"{category['sort_order']} - {category['title']}", category["id"])
+            combo.addItem(f"{to_persian_digits(category['sort_order'])} - {category['title']}", category["id"])
         index = combo.findData(current)
         if index >= 0:
             combo.setCurrentIndex(index)
@@ -450,8 +460,8 @@ class MissionsPage(Page):
         data = {
             "driver_id": self.driver_combo.currentData(),
             "vehicle": self._driver_vehicle_text(driver),
-            "mission_date": self.date_input.text().strip(),
-            "mission_time": self.time_input.text().strip(),
+            "mission_date": to_english_digits(self.date_input.text().strip()),
+            "mission_time": to_english_digits(self.time_input.text().strip()),
             "origin": self.origin_location_combo.currentText().strip(),
             "destination": "، ".join(destinations),
             "distance": self.distance_input.value(),
@@ -504,8 +514,8 @@ class MissionsPage(Page):
         driver_index = self.driver_combo.findData(mission["driver_id"])
         if driver_index >= 0:
             self.driver_combo.setCurrentIndex(driver_index)
-        self.date_input.setText(mission["mission_date"])
-        self.time_input.setText(mission["mission_time"])
+        self.date_input.setText(to_persian_digits(mission["mission_date"]))
+        self.time_input.setText(to_persian_digits(mission["mission_time"]))
         origin_category_id = self._category_id_for_location(mission["origin"])
         if origin_category_id is not None:
             origin_category_index = self.origin_category_combo.findData(origin_category_id)
@@ -605,13 +615,13 @@ class MissionsPage(Page):
             sheet.append(
                 [
                     index,
-                    mission["mission_date"],
-                    mission["mission_time"],
+                    to_persian_digits(mission["mission_date"]),
+                    to_persian_digits(mission["mission_time"]),
                     mission["driver_name"],
                     mission["vehicle"],
                     mission["origin"],
                     mission["destination"],
-                    float(mission["distance"] or 0),
+                    to_persian_digits(f"{float(mission['distance'] or 0):.1f}"),
                     mission["passengers"] or "",
                     mission["description"] or "",
                 ]
@@ -645,12 +655,13 @@ class MissionsPage(Page):
             return
         html_rows = ""
         for index, mission in enumerate(rows, start=1):
+            distance_text = to_persian_digits(f"{float(mission['distance'] or 0):.1f}")
             html_rows += (
                 "<tr>"
-                f"<td>{index}</td><td>{mission['mission_date']}</td><td>{mission['mission_time']}</td>"
+                f"<td>{to_persian_digits(index)}</td><td>{to_persian_digits(mission['mission_date'])}</td><td>{to_persian_digits(mission['mission_time'])}</td>"
                 f"<td>{mission['driver_name']}</td><td>{mission['vehicle']}</td>"
                 f"<td>{mission['origin']}</td><td>{mission['destination']}</td>"
-                f"<td>{float(mission['distance'] or 0):.1f}</td>"
+                f"<td>{distance_text}</td>"
                 "</tr>"
             )
         html = f"""
@@ -685,8 +696,8 @@ class MissionsPage(Page):
         show_success(self, "گزارش PDF با موفقیت ذخیره شد.")
 
     def clear_form(self) -> None:
-        self.date_input.setText(gregorian_to_jalali())
-        self.time_input.setText(current_time_text()[:5])
+        self.date_input.setText(to_persian_digits(gregorian_to_jalali()))
+        self.time_input.setText(to_persian_digits(current_time_text()[:5]))
         self.distance_input.setValue(0)
         self.passengers_input.clear()
         self.description_input.clear()
@@ -720,7 +731,7 @@ class MissionsPage(Page):
                 [
                     f"راننده: {driver['full_name']}",
                     f"خودرو: {self._driver_vehicle_text(driver)}",
-                    f"موبایل: {driver.get('mobile') or '-'}",
+                    f"موبایل: {to_persian_digits(driver.get('mobile') or '-')}",
                 ]
             )
         )
@@ -770,19 +781,20 @@ class MissionsPage(Page):
         if self._formatting_date:
             return
         self._formatting_date = True
-        digits = "".join(ch for ch in text if ch.isdigit())[:8]
+        digits = "".join(ch for ch in to_english_digits(text) if ch.isdigit())[:8]
         if len(digits) <= 4:
             formatted = digits
         elif len(digits) <= 6:
             formatted = f"{digits[:4]}/{digits[4:]}"
         else:
             formatted = f"{digits[:4]}/{digits[4:6]}/{digits[6:]}"
-        self.date_input.setText(formatted)
+        self.date_input.setText(to_persian_digits(formatted))
         self.date_input.setCursorPosition(len(formatted))
         self._formatting_date = False
 
     @staticmethod
     def _is_valid_date(value: str) -> bool:
+        value = to_english_digits(value)
         if not DATE_RE.fullmatch(value):
             return False
         _, month, day = (int(part) for part in value.split("/"))
@@ -790,6 +802,7 @@ class MissionsPage(Page):
 
     @staticmethod
     def _is_valid_time(value: str) -> bool:
+        value = to_english_digits(value)
         if not TIME_RE.fullmatch(value):
             return False
         hour, minute = (int(part) for part in value.split(":"))

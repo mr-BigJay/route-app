@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from database.db import DatabaseError, DatabaseManager
-from ui.utils import Page, confirm, make_stat_card, show_error, show_success
+from ui.utils import Page, confirm, make_stat_card, show_error, show_success, to_english_digits, to_persian_digits
 
 
 PERMANENT_CATEGORY_TITLES = ["ستاد", "بیمارستان", "مرکز درمانی", "خانه بهداشت"]
@@ -33,15 +33,15 @@ class LocationsPage(Page):
         self.root_layout.addLayout(self.stats_layout)
 
         body = QHBoxLayout()
-        body.setDirection(QHBoxLayout.Direction.LeftToRight)
+        body.setDirection(QHBoxLayout.Direction.RightToLeft)
         body.setSpacing(16)
-        body.addWidget(self._tree_card(), stretch=2)
 
         forms = QVBoxLayout()
         forms.setSpacing(16)
         forms.addWidget(self._category_form_card())
         forms.addWidget(self._location_form_card())
         body.addLayout(forms, stretch=1)
+        body.addWidget(self._tree_card(), stretch=2)
         self.root_layout.addLayout(body, stretch=1)
 
     def _category_form_card(self):
@@ -146,7 +146,7 @@ class LocationsPage(Page):
         self.location_category_combo.blockSignals(True)
         self.location_category_combo.clear()
         for category in self.db.list_categories():
-            label = f"{category['sort_order']} - {category['title']}"
+            label = f"{to_persian_digits(category['sort_order'])} - {category['title']}"
             self.location_category_combo.addItem(label, category["id"])
         index = self.location_category_combo.findData(current)
         if index >= 0:
@@ -159,7 +159,7 @@ class LocationsPage(Page):
         locations = self.db.list_locations()
         for category in categories:
             category_item = QTreeWidgetItem(
-                [str(category["sort_order"]), category["title"], "دسته‌بندی"]
+                [to_persian_digits(category["sort_order"]), category["title"], "دسته‌بندی"]
             )
             category_item.setData(
                 0,
@@ -173,7 +173,7 @@ class LocationsPage(Page):
                 if location["category_id"] != category["id"]:
                     continue
                 location_item = QTreeWidgetItem(
-                    [f"{category['sort_order']}.{location_index}", location["title"], "نقطه"]
+                    [to_persian_digits(f"{category['sort_order']}.{location_index}"), location["title"], "نقطه"]
                 )
                 location_item.setData(
                     0,
@@ -298,7 +298,7 @@ class LocationsPage(Page):
             self.selected_location_id = None
             self.location_title_input.clear()
             self.selected_category_id = int(data[1])
-            self.category_order_input.setValue(int(item.text(0)))
+            self.category_order_input.setValue(int(to_english_digits(item.text(0))))
             self.category_title_input.setText(item.text(1))
         elif data[0] == "location":
             self.selected_category_id = None

@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QLocale, Qt
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QApplication
 
@@ -26,6 +26,7 @@ def main() -> int:
     app.setApplicationName("Route")
     app.setOrganizationName("Rudsar Health Network")
     app.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+    QLocale.setDefault(QLocale(QLocale.Language.Persian, QLocale.Country.Iran))
 
     font_family = load_vazirmatn_font(BASE_DIR / "assets" / "fonts")
     app.setFont(QFont(font_family, 10))
