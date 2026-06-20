@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
     QFileDialog,
+    QFrame,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
@@ -256,18 +257,7 @@ class MissionsPage(Page):
         table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
 
     def _labeled_row(self, label: str, widget: QWidget) -> QWidget:
-        row = QWidget()
-        row.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        layout = QHBoxLayout(row)
-        layout.setDirection(QHBoxLayout.Direction.RightToLeft)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(10)
-        label_widget = QLabel(label)
-        label_widget.setMinimumWidth(130)
-        label_widget.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        layout.addWidget(label_widget)
-        layout.addWidget(widget, stretch=1)
-        return row
+        return self._field_box(label, widget)
 
     def _two_field_row(
         self,
@@ -283,18 +273,24 @@ class MissionsPage(Page):
         layout = QHBoxLayout(row)
         layout.setDirection(QHBoxLayout.Direction.RightToLeft)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(10)
-        label_a_widget = QLabel(label_a)
-        label_b_widget = QLabel(label_b)
-        label_a_widget.setMinimumWidth(110)
-        label_b_widget.setMinimumWidth(110)
-        label_a_widget.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        label_b_widget.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        layout.addWidget(label_a_widget)
-        layout.addWidget(widget_a, stretch=stretch_a)
-        layout.addWidget(label_b_widget)
-        layout.addWidget(widget_b, stretch=stretch_b)
+        layout.setSpacing(12)
+        layout.addWidget(self._field_box(label_a, widget_a), stretch=stretch_a)
+        layout.addWidget(self._field_box(label_b, widget_b), stretch=stretch_b)
         return row
+
+    def _field_box(self, label: str, widget: QWidget) -> QFrame:
+        box = QFrame()
+        box.setObjectName("fieldBox")
+        box.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        layout = QVBoxLayout(box)
+        layout.setContentsMargins(12, 8, 12, 10)
+        layout.setSpacing(6)
+        label_widget = QLabel(label)
+        label_widget.setObjectName("fieldLabel")
+        label_widget.setAlignment(Qt.AlignmentFlag.AlignRight)
+        layout.addWidget(label_widget)
+        layout.addWidget(widget)
+        return box
 
     def _prepare_input(self, widget: QWidget) -> None:
         widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
@@ -453,16 +449,8 @@ class MissionsPage(Page):
         self._populate_location_combo(category_combo, location_combo)
         if selected_location:
             location_combo.setCurrentText(selected_location)
-        category_label = QLabel("دسته‌بندی مقصد *")
-        location_label = QLabel("نقطه مقصد *")
-        category_label.setMinimumWidth(120)
-        location_label.setMinimumWidth(110)
-        category_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        location_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        layout.addWidget(category_label)
-        layout.addWidget(category_combo, stretch=35)
-        layout.addWidget(location_label)
-        layout.addWidget(location_combo, stretch=65)
+        layout.addWidget(self._field_box("دسته‌بندی مقصد *", category_combo), stretch=35)
+        layout.addWidget(self._field_box("نقطه مقصد *", location_combo), stretch=65)
         layout.addWidget(remove_button)
         self.destinations_container.addWidget(row)
         self.destination_rows.append((row, category_combo, location_combo))

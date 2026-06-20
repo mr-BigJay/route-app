@@ -34,6 +34,7 @@ class MainWindow(QMainWindow):
         self.nav_buttons: list[QPushButton] = []
 
         self.stack = QStackedWidget()
+        self.stack.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.pages = [
             DashboardPage(self.db),
             DriversPage(self.db),
@@ -45,7 +46,9 @@ class MainWindow(QMainWindow):
             self.stack.addWidget(page)
 
         central = QWidget()
-        central.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        # Keep the top-level container physically LTR so the last widget stays
+        # on the right; all child pages and sidebar content remain RTL.
+        central.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         main_layout = QHBoxLayout(central)
         # Physical placement: content on the left, sidebar on the right.
         # Child widgets keep RTL layout direction for text and controls.
@@ -61,6 +64,7 @@ class MainWindow(QMainWindow):
     def _build_sidebar(self) -> QWidget:
         sidebar = QFrame()
         sidebar.setObjectName("sidebar")
+        sidebar.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         sidebar.setFixedWidth(240)
         layout = QVBoxLayout(sidebar)
         layout.setContentsMargins(18, 24, 18, 24)
