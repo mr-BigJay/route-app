@@ -56,13 +56,16 @@ class DatabaseManager:
 
                 CREATE TABLE IF NOT EXISTS categories (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title TEXT NOT NULL UNIQUE
+                    title TEXT NOT NULL UNIQUE,
+                    sort_order INTEGER NOT NULL DEFAULT 0,
+                    is_locked INTEGER NOT NULL DEFAULT 0
                 );
 
                 CREATE TABLE IF NOT EXISTS locations (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     category_id INTEGER NOT NULL,
                     title TEXT NOT NULL,
+                    sort_order INTEGER NOT NULL DEFAULT 0,
                     FOREIGN KEY (category_id)
                         REFERENCES categories (id)
                         ON DELETE CASCADE,
@@ -88,7 +91,124 @@ class DatabaseManager:
                 """
             )
         self._ensure_driver_columns()
+        self._ensure_category_location_columns()
         self.seed_defaults()
+
+    def _ensure_category_location_columns(self) -> None:
+        with self.connection() as conn:
+            category_columns = {
+                row["name"] for row in conn.execute("PRAGMA table_info(categories)").fetchall()
+            }
+            if "sort_order" not in category_columns:
+                conn.execute("ALTER TABLE categories ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0")
+            if "is_locked" not in category_columns:
+                conn.execute("ALTER TABLE categories ADD COLUMN is_locked INTEGER NOT NULL DEFAULT 0")
+
+            location_columns = {
+                row["name"] for row in conn.execute("PRAGMA table_info(locations)").fetchall()
+            }
+            if "sort_order" not in location_columns:
+                conn.execute("ALTER TABLE locations ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0")
+
+            conn.execute(
+                """
+                UPDATE categories
+                SET title = 'مرکز درمانی'
+                WHERE title = 'مرکز'
+                  AND NOT EXISTS (SELECT 1 FROM categories WHERE title = 'مرکز درمانی')
+                """
+            )
+            old_center = conn.execute(
+                "SELECT id FROM categories WHERE title = 'مرکز'"
+            ).fetchone()
+            new_center = conn.execute(
+                "SELECT id FROM categories WHERE title = 'مرکز درمانی'"
+            ).fetchone()
+            if old_center and new_center:
+                old_id = int(old_center["id"])
+                new_id = int(new_center["id"])
+                old_locations = conn.execute(
+                    "SELECT id, title FROM locations WHERE category_id = ?",
+                    (old_id,),
+                ).fetchall()
+                for location in old_locations:
+                    duplicate = conn.execute(
+                        """
+                        SELECT 1 FROM locations
+                        WHERE category_id = ? AND title = ?
+                        """,
+                        (new_id, location["title"]),
+                    ).fetchone()
+                    if duplicate:
+                        conn.execute("DELETE FROM locations WHERE id = ?", (location["id"],))
+                    else:
+                        conn.execute(
+                            "UPDATE locations SET category_id = ? WHERE id = ?",
+                            (new_id, location["id"]),
+                        )
+                conn.execute("DELETE FROM categories WHERE id = ?", (old_id,))
+
+            permanent_categories = [
+                (1, "ستاد"),
+                (2, "بیمارستان"),
+                (3, "مرکز درمانی"),
+                (4, "خانه بهداشت"),
+            ]
+            for sort_order, title in permanent_categories:
+                row = conn.execute(
+                    "SELECT id FROM categories WHERE title = ?",
+                    (title,),
+                ).fetchone()
+                if row:
+                    conn.execute(
+                        """
+                        UPDATE categories
+                        SET sort_order = ?, is_locked = 1
+                        WHERE id = ?
+                        """,
+                        (sort_order, row["id"]),
+                    )
+                else:
+                    conn.execute(
+                        """
+                        INSERT INTO categories (title, sort_order, is_locked)
+                        VALUES (?, ?, 1)
+                        """,
+                        (title, sort_order),
+                    )
+
+            rows = conn.execute(
+                """
+                SELECT id
+                FROM categories
+                WHERE sort_order = 0
+                ORDER BY title
+                """
+            ).fetchall()
+            next_order = 5
+            for row in rows:
+                conn.execute(
+                    "UPDATE categories SET sort_order = ? WHERE id = ?",
+                    (next_order, row["id"]),
+                )
+                next_order += 1
+
+            location_rows = conn.execute(
+                """
+                SELECT id, category_id
+                FROM locations
+                WHERE sort_order = 0
+                ORDER BY category_id, title
+                """
+            ).fetchall()
+            per_category_count: dict[int, int] = {}
+            for row in location_rows:
+                category_id = int(row["category_id"])
+                per_category_count[category_id] = per_category_count.get(category_id, 0) + 1
+                conn.execute(
+                    "UPDATE locations SET sort_order = ? WHERE id = ?",
+                    (per_category_count[category_id], row["id"]),
+                )
 
     def _ensure_driver_columns(self) -> None:
         required_columns = {
@@ -135,9 +255,9 @@ class DatabaseManager:
         ]
         default_categories = {
             "ستاد": ["شبکه بهداشت", "معاونت بهداشتی", "معاونت درمان"],
-            "مرکز": ["مرکز کلاچای", "مرکز رحیم آباد", "مرکز واجارگاه"],
-            "خانه بهداشت": ["زیاز", "جیرکلایه", "املش", "سفید آب"],
             "بیمارستان": ["بیمارستان رودسر"],
+            "مرکز درمانی": ["مرکز کلاچای", "مرکز رحیم آباد", "مرکز واجارگاه"],
+            "خانه بهداشت": ["زیاز", "جیرکلایه", "املش", "سفید آب"],
         }
 
         with self.connection() as conn:
@@ -329,38 +449,79 @@ class DatabaseManager:
         return f"{data.get('first_name', '').strip()} {data.get('last_name', '').strip()}".strip()
 
     def list_categories(self) -> list[dict[str, Any]]:
-        return self.fetch_all("SELECT id, title FROM categories ORDER BY title")
-
-    def add_category(self, title: str) -> int:
-        return self.execute(
-            "INSERT INTO categories (title) VALUES (?)",
-            (title.strip(),),
+        return self.fetch_all(
+            """
+            SELECT id, title, sort_order, is_locked
+            FROM categories
+            ORDER BY sort_order, title
+            """
         )
 
-    def update_category(self, category_id: int, title: str) -> None:
+    def add_category(self, title: str, sort_order: int | None = None) -> int:
+        if sort_order is None:
+            row = self.fetch_one("SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM categories")
+            sort_order = int(row["next_order"]) if row else 1
+        return self.execute(
+            "INSERT INTO categories (title, sort_order, is_locked) VALUES (?, ?, 0)",
+            (title.strip(), sort_order),
+        )
+
+    def update_category(self, category_id: int, title: str, sort_order: int) -> None:
         self.execute(
-            "UPDATE categories SET title = ? WHERE id = ?",
-            (title.strip(), category_id),
+            "UPDATE categories SET title = ?, sort_order = ? WHERE id = ?",
+            (title.strip(), sort_order, category_id),
         )
 
     def delete_category(self, category_id: int) -> None:
         self.execute("DELETE FROM categories WHERE id = ?", (category_id,))
 
+    def get_category(self, category_id: int) -> dict[str, Any] | None:
+        return self.fetch_one(
+            """
+            SELECT id, title, sort_order, is_locked
+            FROM categories
+            WHERE id = ?
+            """,
+            (category_id,),
+        )
+
+    def category_location_counts(self) -> dict[str, int]:
+        rows = self.fetch_all(
+            """
+            SELECT categories.title, COUNT(locations.id) AS total
+            FROM categories
+            LEFT JOIN locations ON locations.category_id = categories.id
+            WHERE categories.title IN ('ستاد', 'بیمارستان', 'مرکز درمانی', 'خانه بهداشت')
+            GROUP BY categories.id, categories.title, categories.sort_order
+            ORDER BY categories.sort_order
+            """
+        )
+        return {row["title"]: int(row["total"]) for row in rows}
+
     def list_locations(self) -> list[dict[str, Any]]:
         return self.fetch_all(
             """
             SELECT locations.id, locations.category_id, locations.title,
-                   categories.title AS category_title
+                   locations.sort_order,
+                   categories.title AS category_title,
+                   categories.sort_order AS category_sort_order
             FROM locations
             JOIN categories ON categories.id = locations.category_id
-            ORDER BY categories.title, locations.title
+            ORDER BY categories.sort_order, locations.sort_order, locations.title
             """
         )
 
     def add_location(self, category_id: int, title: str) -> int:
         return self.execute(
-            "INSERT INTO locations (category_id, title) VALUES (?, ?)",
-            (category_id, title.strip()),
+            """
+            INSERT INTO locations (category_id, title, sort_order)
+            VALUES (
+                ?,
+                ?,
+                COALESCE((SELECT MAX(sort_order) + 1 FROM locations WHERE category_id = ?), 1)
+            )
+            """,
+            (category_id, title.strip(), category_id),
         )
 
     def update_location(self, location_id: int, category_id: int, title: str) -> None:
