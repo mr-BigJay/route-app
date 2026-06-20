@@ -286,11 +286,13 @@ class MissionsPage(Page):
         row = QWidget()
         row.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         layout = QHBoxLayout(row)
-        layout.setDirection(QHBoxLayout.Direction.RightToLeft)
+        # Use a physical LTR layout and add the right-side field last so the
+        # visible order stays stable even when Qt mirrors RTL widgets.
+        layout.setDirection(QHBoxLayout.Direction.LeftToRight)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(12)
-        layout.addWidget(self._field_box(label_a, widget_a), stretch=stretch_a)
         layout.addWidget(self._field_box(label_b, widget_b), stretch=stretch_b)
+        layout.addWidget(self._field_box(label_a, widget_a), stretch=stretch_a)
         return row
 
     def _field_box(self, label: str, widget: QWidget) -> QFrame:
@@ -442,7 +444,9 @@ class MissionsPage(Page):
         row = QWidget()
         row.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         layout = QHBoxLayout(row)
-        layout.setDirection(QHBoxLayout.Direction.RightToLeft)
+        # Physical order: actions on the left, point in the middle, category on
+        # the right. Field contents themselves remain RTL.
+        layout.setDirection(QHBoxLayout.Direction.LeftToRight)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
         category_combo = QComboBox()
@@ -475,15 +479,15 @@ class MissionsPage(Page):
         actions = QWidget()
         actions.setObjectName("destinationActions")
         actions_layout = QHBoxLayout(actions)
-        actions_layout.setDirection(QHBoxLayout.Direction.RightToLeft)
+        actions_layout.setDirection(QHBoxLayout.Direction.LeftToRight)
         actions_layout.setContentsMargins(0, 0, 0, 0)
         actions_layout.setSpacing(8)
         actions_layout.addWidget(add_button)
         actions_layout.addWidget(remove_button)
 
         layout.addWidget(actions)
-        layout.addWidget(self._field_box("دسته‌بندی مقصد *", category_combo), stretch=35)
         layout.addWidget(self._field_box("نقطه مقصد *", location_combo), stretch=65)
+        layout.addWidget(self._field_box("دسته‌بندی مقصد *", category_combo), stretch=35)
         self.destinations_container.addWidget(row)
         self.destination_rows.append((row, category_combo, location_combo))
         self._sync_destination_action_buttons()
