@@ -168,44 +168,6 @@ QLabel#fieldLabel {
     font-weight: 800;
 }
 
-QFrame#fieldBox[missionFormControl="true"] {
-    min-height: 66px;
-}
-
-QLabel#fieldLabel[missionFormControl="true"] {
-    qproperty-alignment: AlignRight;
-}
-
-QLineEdit[missionFormControl="true"],
-QComboBox[missionFormControl="true"],
-QDoubleSpinBox[missionFormControl="true"] {
-    min-height: 38px;
-    max-height: 38px;
-}
-
-QPlainTextEdit[missionFormControl="true"] {
-    min-height: 76px;
-}
-
-QComboBox[missionFormControl="true"] {
-    padding-right: 30px;
-    padding-left: 8px;
-}
-
-QComboBox[missionFormControl="true"]::drop-down {
-    subcontrol-origin: padding;
-    subcontrol-position: top right;
-    width: 24px;
-    border-left: 1px solid #CBD5E1;
-    border-top-right-radius: 8px;
-    border-bottom-right-radius: 8px;
-}
-
-QComboBox[missionFormControl="true"]::down-arrow {
-    width: 9px;
-    height: 9px;
-}
-
 QPushButton[role="primary"] {
     background: #22C55E;
     color: #FFFFFF;

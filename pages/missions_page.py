@@ -207,7 +207,7 @@ class MissionsPage(Page):
         self.passengers_input.setPlaceholderText("مثال: علی احمدی و رضا محمدی")
         self.description_input = QPlainTextEdit()
         self._prepare_input(self.description_input)
-        self.description_input.setFixedHeight(76)
+        self.description_input.setFixedHeight(74)
         form_layout.addWidget(self._labeled_row("مسافت *", self.distance_input))
         form_layout.addWidget(self._labeled_row("سرنشینان", self.passengers_input))
         form_layout.addWidget(self._labeled_row("توضیحات", self.description_input))
@@ -298,42 +298,25 @@ class MissionsPage(Page):
     def _field_box(self, label: str, widget: QWidget) -> QFrame:
         box = QFrame()
         box.setObjectName("fieldBox")
-        box.setProperty("missionFormControl", True)
         box.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         layout = QVBoxLayout(box)
-        layout.setContentsMargins(12, 10, 12, 12)
-        layout.setSpacing(8)
+        layout.setContentsMargins(12, 8, 12, 10)
+        layout.setSpacing(6)
         label_widget = QLabel(label)
         label_widget.setObjectName("fieldLabel")
-        label_widget.setProperty("missionFormControl", True)
-        label_widget.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        label_widget.setAlignment(Qt.AlignmentFlag.AlignRight)
         layout.addWidget(label_widget)
         layout.addWidget(widget)
         return box
 
     def _prepare_input(self, widget: QWidget) -> None:
-        widget.setProperty("missionFormControl", True)
         widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        widget.setMinimumHeight(38)
         if isinstance(widget, QLineEdit):
             widget.setAlignment(Qt.AlignmentFlag.AlignRight)
         elif isinstance(widget, QPlainTextEdit):
             widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-            widget.setMinimumHeight(76)
         elif isinstance(widget, QDoubleSpinBox):
             widget.setAlignment(Qt.AlignmentFlag.AlignRight)
-        elif isinstance(widget, QComboBox):
-            # Non-editable QComboBox text alignment is style-dependent in Qt.
-            # A read-only line edit gives stable RTL text while preserving dropdown behavior.
-            widget.setEditable(True)
-            widget.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
-            widget.lineEdit().setReadOnly(True)
-            widget.lineEdit().setProperty("missionFormControl", True)
-            widget.lineEdit().setMinimumHeight(38)
-            widget.lineEdit().setAlignment(Qt.AlignmentFlag.AlignRight)
-            widget.lineEdit().setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-            widget.lineEdit().setFocusPolicy(Qt.FocusPolicy.NoFocus)
-            widget.view().setLayoutDirection(Qt.LayoutDirection.RightToLeft)
 
     def refresh(self) -> None:
         self._refresh_home()
