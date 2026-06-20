@@ -148,6 +148,20 @@ QFrame#fieldBox {
     border-radius: 10px;
 }
 
+QWidget#destinationActions {
+    background: transparent;
+}
+
+QPushButton#destinationActionButton {
+    min-width: 42px;
+    max-width: 42px;
+    min-height: 42px;
+    max-height: 42px;
+    padding: 0;
+    font-size: 15px;
+    font-weight: 800;
+}
+
 QLabel#fieldLabel {
     color: #0F172A;
     font-size: 12px;

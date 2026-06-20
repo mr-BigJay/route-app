@@ -123,6 +123,7 @@ class MissionsPage(Page):
         layout.setSpacing(14)
 
         card = self.card()
+        card.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         form_layout = QVBoxLayout(card)
         form_layout.setContentsMargins(18, 16, 18, 16)
         form_layout.setSpacing(12)
@@ -173,13 +174,11 @@ class MissionsPage(Page):
         )
 
         destinations_group = QGroupBox("مقصدها")
+        destinations_group.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         destinations_layout = QVBoxLayout(destinations_group)
         self.destinations_container = QVBoxLayout()
+        self.destinations_container.setDirection(QVBoxLayout.Direction.TopToBottom)
         destinations_layout.addLayout(self.destinations_container)
-        add_destination_button = self.action_button("+", "secondary")
-        add_destination_button.setFixedWidth(46)
-        add_destination_button.clicked.connect(lambda: self.add_destination_row())
-        destinations_layout.addWidget(add_destination_button, alignment=Qt.AlignmentFlag.AlignLeft)
         form_layout.addWidget(destinations_group)
 
         self.distance_input = QDoubleSpinBox()
@@ -434,9 +433,17 @@ class MissionsPage(Page):
         location_combo = QComboBox()
         self._prepare_input(category_combo)
         self._prepare_input(location_combo)
+        add_button = QPushButton("+")
+        add_button.setObjectName("destinationActionButton")
+        add_button.setProperty("role", "secondary")
+        add_button.setFixedSize(42, 42)
+        add_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        add_button.clicked.connect(lambda: self.add_destination_row())
         remove_button = QPushButton("×")
-        remove_button.setFixedWidth(34)
+        remove_button.setObjectName("destinationActionButton")
         remove_button.setProperty("role", "danger")
+        remove_button.setFixedSize(42, 42)
+        remove_button.setCursor(Qt.CursorShape.PointingHandCursor)
         remove_button.clicked.connect(lambda: self.remove_destination_row(row))
         category_combo.currentIndexChanged.connect(
             lambda: self._populate_location_combo(category_combo, location_combo)
@@ -449,13 +456,21 @@ class MissionsPage(Page):
         self._populate_location_combo(category_combo, location_combo)
         if selected_location:
             location_combo.setCurrentText(selected_location)
+        actions = QWidget()
+        actions.setObjectName("destinationActions")
+        actions_layout = QHBoxLayout(actions)
+        actions_layout.setDirection(QHBoxLayout.Direction.RightToLeft)
+        actions_layout.setContentsMargins(0, 0, 0, 0)
+        actions_layout.setSpacing(8)
+        actions_layout.addWidget(add_button)
+        actions_layout.addWidget(remove_button)
+
+        layout.addWidget(actions)
         layout.addWidget(self._field_box("دسته‌بندی مقصد *", category_combo), stretch=35)
         layout.addWidget(self._field_box("نقطه مقصد *", location_combo), stretch=65)
-        layout.addWidget(remove_button)
         self.destinations_container.addWidget(row)
         self.destination_rows.append((row, category_combo, location_combo))
-        if len(self.destination_rows) == 1:
-            remove_button.setEnabled(False)
+        self._sync_destination_action_buttons()
 
     def remove_destination_row(self, row: QWidget) -> None:
         if len(self.destination_rows) <= 1:
@@ -465,6 +480,18 @@ class MissionsPage(Page):
                 self.destination_rows.pop(index)
                 widget.deleteLater()
                 break
+        self._sync_destination_action_buttons()
+
+    def _sync_destination_action_buttons(self) -> None:
+        single_row = len(self.destination_rows) <= 1
+        at_limit = len(self.destination_rows) >= self.MAX_DESTINATIONS
+        for row, _, _ in self.destination_rows:
+            buttons = row.findChildren(QPushButton, "destinationActionButton")
+            for button in buttons:
+                if button.text() == "×":
+                    button.setEnabled(not single_row)
+                elif button.text() == "+":
+                    button.setEnabled(not at_limit)
 
     def open_new_mission_form(self) -> None:
         self.selected_id = None
