@@ -120,13 +120,13 @@ class MissionsPage(Page):
         page.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         layout = QVBoxLayout(page)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(14)
+        layout.setSpacing(8)
 
         card = self.card()
         card.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         form_layout = QVBoxLayout(card)
-        form_layout.setContentsMargins(18, 16, 18, 16)
-        form_layout.setSpacing(12)
+        form_layout.setContentsMargins(14, 12, 14, 12)
+        form_layout.setSpacing(8)
 
         self.form_title = QLabel("ثبت ماموریت جدید")
         self.form_title.setObjectName("sectionTitle")
@@ -138,7 +138,7 @@ class MissionsPage(Page):
         self.driver_profile_label = QLabel("پروفایل راننده و خودرو پس از انتخاب راننده نمایش داده می‌شود.")
         self.driver_profile_label.setObjectName("profileInfo")
         self.driver_profile_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        self.driver_profile_label.setMinimumHeight(38)
+        self.driver_profile_label.setMinimumHeight(30)
         form_layout.addWidget(
             self._two_field_row(
                 "راننده *",
@@ -175,8 +175,8 @@ class MissionsPage(Page):
         origin_group = QGroupBox("مبدا")
         origin_group.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         origin_layout = QVBoxLayout(origin_group)
-        origin_layout.setContentsMargins(12, 14, 12, 12)
-        origin_layout.setSpacing(10)
+        origin_layout.setContentsMargins(10, 10, 10, 8)
+        origin_layout.setSpacing(6)
         origin_layout.addWidget(
             self._two_field_row(
                 "دسته‌بندی مبدا *",
@@ -192,8 +192,11 @@ class MissionsPage(Page):
         destinations_group = QGroupBox("مقصدها")
         destinations_group.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         destinations_layout = QVBoxLayout(destinations_group)
+        destinations_layout.setContentsMargins(10, 10, 10, 8)
+        destinations_layout.setSpacing(6)
         self.destinations_container = QVBoxLayout()
         self.destinations_container.setDirection(QVBoxLayout.Direction.TopToBottom)
+        self.destinations_container.setSpacing(6)
         destinations_layout.addLayout(self.destinations_container)
         form_layout.addWidget(destinations_group)
 
@@ -207,7 +210,7 @@ class MissionsPage(Page):
         self.passengers_input.setPlaceholderText("مثال: علی احمدی و رضا محمدی")
         self.description_input = QPlainTextEdit()
         self._prepare_input(self.description_input)
-        self.description_input.setFixedHeight(74)
+        self.description_input.setFixedHeight(56)
         form_layout.addWidget(self._labeled_row("مسافت *", self.distance_input))
         form_layout.addWidget(self._labeled_row("سرنشینان", self.passengers_input))
         form_layout.addWidget(self._labeled_row("توضیحات", self.description_input))
@@ -290,7 +293,7 @@ class MissionsPage(Page):
         # visible order stays stable even when Qt mirrors RTL widgets.
         layout.setDirection(QHBoxLayout.Direction.LeftToRight)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(12)
+        layout.setSpacing(8)
         layout.addWidget(self._field_box(label_b, widget_b), stretch=stretch_b)
         layout.addWidget(self._field_box(label_a, widget_a), stretch=stretch_a)
         return row
@@ -300,8 +303,8 @@ class MissionsPage(Page):
         box.setObjectName("fieldBox")
         box.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         layout = QVBoxLayout(box)
-        layout.setContentsMargins(12, 8, 12, 10)
-        layout.setSpacing(6)
+        layout.setContentsMargins(10, 6, 10, 8)
+        layout.setSpacing(4)
         label_widget = QLabel(label)
         label_widget.setObjectName("fieldLabel")
         label_widget.setAlignment(Qt.AlignmentFlag.AlignRight)
@@ -311,6 +314,7 @@ class MissionsPage(Page):
 
     def _prepare_input(self, widget: QWidget) -> None:
         widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        widget.setMinimumHeight(30)
         if isinstance(widget, QLineEdit):
             widget.setAlignment(Qt.AlignmentFlag.AlignRight)
         elif isinstance(widget, QPlainTextEdit):
@@ -448,7 +452,7 @@ class MissionsPage(Page):
         # the right. Field contents themselves remain RTL.
         layout.setDirection(QHBoxLayout.Direction.LeftToRight)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(10)
+        layout.setSpacing(8)
         category_combo = QComboBox()
         location_combo = QComboBox()
         self._prepare_input(category_combo)
@@ -456,13 +460,13 @@ class MissionsPage(Page):
         add_button = QPushButton("+")
         add_button.setObjectName("destinationActionButton")
         add_button.setProperty("role", "secondary")
-        add_button.setFixedSize(42, 42)
+        add_button.setFixedSize(34, 34)
         add_button.setCursor(Qt.CursorShape.PointingHandCursor)
         add_button.clicked.connect(lambda: self.add_destination_row())
         remove_button = QPushButton("×")
         remove_button.setObjectName("destinationActionButton")
         remove_button.setProperty("role", "danger")
-        remove_button.setFixedSize(42, 42)
+        remove_button.setFixedSize(34, 34)
         remove_button.setCursor(Qt.CursorShape.PointingHandCursor)
         remove_button.clicked.connect(lambda: self.remove_destination_row(row))
         category_combo.currentIndexChanged.connect(
@@ -481,7 +485,7 @@ class MissionsPage(Page):
         actions_layout = QHBoxLayout(actions)
         actions_layout.setDirection(QHBoxLayout.Direction.LeftToRight)
         actions_layout.setContentsMargins(0, 0, 0, 0)
-        actions_layout.setSpacing(8)
+        actions_layout.setSpacing(6)
         actions_layout.addWidget(add_button)
         actions_layout.addWidget(remove_button)
 
