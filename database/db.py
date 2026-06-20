@@ -288,17 +288,15 @@ class DatabaseManager:
                     ),
                 )
             for category, locations in default_categories.items():
-                cur = conn.execute(
+                conn.execute(
                     "INSERT OR IGNORE INTO categories (title) VALUES (?)",
                     (category,),
                 )
-                category_id = cur.lastrowid
-                if not category_id:
-                    row = conn.execute(
-                        "SELECT id FROM categories WHERE title = ?",
-                        (category,),
-                    ).fetchone()
-                    category_id = int(row["id"])
+                row = conn.execute(
+                    "SELECT id FROM categories WHERE title = ?",
+                    (category,),
+                ).fetchone()
+                category_id = int(row["id"])
                 for title in locations:
                     conn.execute(
                         """
