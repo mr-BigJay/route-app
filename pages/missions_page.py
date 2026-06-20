@@ -127,6 +127,7 @@ class MissionsPage(Page):
         form_layout = QVBoxLayout(card)
         form_layout.setContentsMargins(14, 12, 14, 12)
         form_layout.setSpacing(8)
+        form_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self.form_title = QLabel("ثبت ماموریت جدید")
         self.form_title.setObjectName("sectionTitle")
@@ -197,6 +198,7 @@ class MissionsPage(Page):
         self.destinations_container = QVBoxLayout()
         self.destinations_container.setDirection(QVBoxLayout.Direction.TopToBottom)
         self.destinations_container.setSpacing(6)
+        self.destinations_container.setContentsMargins(0, 0, 0, 0)
         destinations_layout.addLayout(self.destinations_container)
         form_layout.addWidget(destinations_group)
 
@@ -287,7 +289,7 @@ class MissionsPage(Page):
         stretch_b: int,
     ) -> QWidget:
         row = QWidget()
-        row.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        row.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         layout = QHBoxLayout(row)
         # Use a physical LTR layout and add the right-side field last so the
         # visible order stays stable even when Qt mirrors RTL widgets.
@@ -446,7 +448,7 @@ class MissionsPage(Page):
             show_error(self, "حداکثر 10 مقصد قابل ثبت است.")
             return
         row = QWidget()
-        row.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        row.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         layout = QHBoxLayout(row)
         # Physical order: actions on the left, point in the middle, category on
         # the right. Field contents themselves remain RTL.
