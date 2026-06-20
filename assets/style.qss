@@ -84,6 +84,21 @@ QPushButton#navButton[active="true"] {
     font-weight: 800;
 }
 
+QPushButton#optionButton {
+    background: #FFFFFF;
+    color: #1E3A8A;
+    border: 1px solid #BFDBFE;
+    border-radius: 18px;
+    padding: 20px;
+    font-size: 15px;
+    text-align: center;
+}
+
+QPushButton#optionButton:hover {
+    background: #EFF6FF;
+    border: 1px solid #2563EB;
+}
+
 QPushButton[role="primary"] {
     background: #22C55E;
     color: #FFFFFF;

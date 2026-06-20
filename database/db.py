@@ -49,7 +49,9 @@ class DatabaseManager:
                     car_model TEXT NOT NULL DEFAULT '',
                     car_year TEXT NOT NULL DEFAULT '',
                     car_color TEXT NOT NULL DEFAULT '',
-                    distance_rate REAL NOT NULL DEFAULT 0
+                    distance_rate REAL NOT NULL DEFAULT 0,
+                    is_active INTEGER NOT NULL DEFAULT 1,
+                    inactive_reason TEXT NOT NULL DEFAULT ''
                 );
 
                 CREATE TABLE IF NOT EXISTS categories (
@@ -99,6 +101,8 @@ class DatabaseManager:
             "car_year": "TEXT NOT NULL DEFAULT ''",
             "car_color": "TEXT NOT NULL DEFAULT ''",
             "distance_rate": "REAL NOT NULL DEFAULT 0",
+            "is_active": "INTEGER NOT NULL DEFAULT 1",
+            "inactive_reason": "TEXT NOT NULL DEFAULT ''",
         }
         with self.connection() as conn:
             existing_columns = {
@@ -143,9 +147,10 @@ class DatabaseManager:
                     """
                     INSERT OR IGNORE INTO drivers (
                         full_name, first_name, last_name, mobile, national_id,
-                        birth_date, car_model, car_year, car_color, distance_rate
+                        birth_date, car_model, car_year, car_color, distance_rate,
+                        is_active, inactive_reason
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         full_name,
@@ -158,6 +163,8 @@ class DatabaseManager:
                         "",
                         "",
                         0,
+                        1,
+                        "",
                     ),
                 )
             for category, locations in default_categories.items():
@@ -207,7 +214,8 @@ class DatabaseManager:
         return self.fetch_all(
             """
             SELECT id, full_name, first_name, last_name, mobile, national_id,
-                   birth_date, car_model, car_year, car_color, distance_rate
+                   birth_date, car_model, car_year, car_color, distance_rate,
+                   is_active, inactive_reason
             FROM drivers
             ORDER BY full_name
             """
@@ -219,9 +227,10 @@ class DatabaseManager:
             """
             INSERT INTO drivers (
                 full_name, first_name, last_name, mobile, national_id,
-                birth_date, car_model, car_year, car_color, distance_rate
+                birth_date, car_model, car_year, car_color, distance_rate,
+                is_active, inactive_reason
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 driver["full_name"],
@@ -234,6 +243,8 @@ class DatabaseManager:
                 driver["car_year"],
                 driver["car_color"],
                 float(driver["distance_rate"]),
+                int(driver["is_active"]),
+                driver["inactive_reason"],
             ),
         )
 
@@ -244,7 +255,8 @@ class DatabaseManager:
             UPDATE drivers
             SET full_name = ?, first_name = ?, last_name = ?, mobile = ?,
                 national_id = ?, birth_date = ?, car_model = ?, car_year = ?,
-                car_color = ?, distance_rate = ?
+                car_color = ?, distance_rate = ?, is_active = ?,
+                inactive_reason = ?
             WHERE id = ?
             """,
             (
@@ -258,12 +270,29 @@ class DatabaseManager:
                 driver["car_year"],
                 driver["car_color"],
                 float(driver["distance_rate"]),
+                int(driver["is_active"]),
+                driver["inactive_reason"],
                 driver_id,
             ),
         )
 
     def delete_driver(self, driver_id: int) -> None:
         self.execute("DELETE FROM drivers WHERE id = ?", (driver_id,))
+
+    def set_driver_active(
+        self,
+        driver_id: int,
+        is_active: bool,
+        inactive_reason: str = "",
+    ) -> None:
+        self.execute(
+            """
+            UPDATE drivers
+            SET is_active = ?, inactive_reason = ?
+            WHERE id = ?
+            """,
+            (1 if is_active else 0, "" if is_active else inactive_reason.strip(), driver_id),
+        )
 
     def _normalize_driver_data(self, data: dict[str, Any] | str) -> dict[str, Any]:
         if isinstance(data, str):
@@ -280,6 +309,8 @@ class DatabaseManager:
             "car_year": str(data.get("car_year", "")).strip(),
             "car_color": str(data.get("car_color", "")).strip(),
             "distance_rate": float(data.get("distance_rate") or 0),
+            "is_active": int(data.get("is_active", 1)),
+            "inactive_reason": str(data.get("inactive_reason", "")).strip(),
         }
         driver["full_name"] = self._driver_full_name(driver)
         return driver
