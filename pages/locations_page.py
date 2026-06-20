@@ -236,9 +236,13 @@ class LocationsPage(Page):
         if not data:
             return
         if data[0] == "category":
+            self.selected_location_id = None
+            self.location_title_input.clear()
             self.selected_category_id = int(data[1])
             self.category_title_input.setText(item.text(0))
         elif data[0] == "location":
+            self.selected_category_id = None
+            self.category_title_input.clear()
             self.selected_location_id = int(data[1])
             category_id = int(data[2])
             self.location_title_input.setText(item.text(0))
