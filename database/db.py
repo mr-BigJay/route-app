@@ -40,7 +40,16 @@ class DatabaseManager:
                 """
                 CREATE TABLE IF NOT EXISTS drivers (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    full_name TEXT NOT NULL UNIQUE
+                    full_name TEXT NOT NULL UNIQUE,
+                    first_name TEXT NOT NULL DEFAULT '',
+                    last_name TEXT NOT NULL DEFAULT '',
+                    mobile TEXT NOT NULL DEFAULT '',
+                    national_id TEXT NOT NULL DEFAULT '',
+                    birth_date TEXT NOT NULL DEFAULT '',
+                    car_model TEXT NOT NULL DEFAULT '',
+                    car_year TEXT NOT NULL DEFAULT '',
+                    car_color TEXT NOT NULL DEFAULT '',
+                    distance_rate REAL NOT NULL DEFAULT 0
                 );
 
                 CREATE TABLE IF NOT EXISTS categories (
@@ -76,14 +85,49 @@ class DatabaseManager:
                 );
                 """
             )
+        self._ensure_driver_columns()
         self.seed_defaults()
+
+    def _ensure_driver_columns(self) -> None:
+        required_columns = {
+            "first_name": "TEXT NOT NULL DEFAULT ''",
+            "last_name": "TEXT NOT NULL DEFAULT ''",
+            "mobile": "TEXT NOT NULL DEFAULT ''",
+            "national_id": "TEXT NOT NULL DEFAULT ''",
+            "birth_date": "TEXT NOT NULL DEFAULT ''",
+            "car_model": "TEXT NOT NULL DEFAULT ''",
+            "car_year": "TEXT NOT NULL DEFAULT ''",
+            "car_color": "TEXT NOT NULL DEFAULT ''",
+            "distance_rate": "REAL NOT NULL DEFAULT 0",
+        }
+        with self.connection() as conn:
+            existing_columns = {
+                row["name"] for row in conn.execute("PRAGMA table_info(drivers)").fetchall()
+            }
+            for column_name, definition in required_columns.items():
+                if column_name not in existing_columns:
+                    conn.execute(f"ALTER TABLE drivers ADD COLUMN {column_name} {definition}")
+
+            rows = conn.execute(
+                """
+                SELECT id, full_name, first_name, last_name
+                FROM drivers
+                WHERE first_name = '' AND last_name = ''
+                """
+            ).fetchall()
+            for row in rows:
+                first_name, last_name = self._split_full_name(row["full_name"])
+                conn.execute(
+                    "UPDATE drivers SET first_name = ?, last_name = ? WHERE id = ?",
+                    (first_name, last_name, row["id"]),
+                )
 
     def seed_defaults(self) -> None:
         default_drivers = [
-            "علی محمدی",
-            "مهدی احمدی",
-            "رضا عباسی",
-            "حسن رضایی",
+            {"first_name": "علی", "last_name": "محمدی"},
+            {"first_name": "مهدی", "last_name": "احمدی"},
+            {"first_name": "رضا", "last_name": "عباسی"},
+            {"first_name": "حسن", "last_name": "رضایی"},
         ]
         default_categories = {
             "ستاد": ["شبکه بهداشت", "معاونت بهداشتی", "معاونت درمان"],
@@ -93,10 +137,28 @@ class DatabaseManager:
         }
 
         with self.connection() as conn:
-            for full_name in default_drivers:
+            for driver in default_drivers:
+                full_name = self._driver_full_name(driver)
                 conn.execute(
-                    "INSERT OR IGNORE INTO drivers (full_name) VALUES (?)",
-                    (full_name,),
+                    """
+                    INSERT OR IGNORE INTO drivers (
+                        full_name, first_name, last_name, mobile, national_id,
+                        birth_date, car_model, car_year, car_color, distance_rate
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        full_name,
+                        driver["first_name"],
+                        driver["last_name"],
+                        "",
+                        "",
+                        "",
+                        "",
+                        "",
+                        "",
+                        0,
+                    ),
                 )
             for category, locations in default_categories.items():
                 cur = conn.execute(
@@ -142,22 +204,98 @@ class DatabaseManager:
         return int(row["total"]) if row else 0
 
     def list_drivers(self) -> list[dict[str, Any]]:
-        return self.fetch_all("SELECT id, full_name FROM drivers ORDER BY full_name")
-
-    def add_driver(self, full_name: str) -> int:
-        return self.execute(
-            "INSERT INTO drivers (full_name) VALUES (?)",
-            (full_name.strip(),),
+        return self.fetch_all(
+            """
+            SELECT id, full_name, first_name, last_name, mobile, national_id,
+                   birth_date, car_model, car_year, car_color, distance_rate
+            FROM drivers
+            ORDER BY full_name
+            """
         )
 
-    def update_driver(self, driver_id: int, full_name: str) -> None:
+    def add_driver(self, data: dict[str, Any] | str) -> int:
+        driver = self._normalize_driver_data(data)
+        return self.execute(
+            """
+            INSERT INTO drivers (
+                full_name, first_name, last_name, mobile, national_id,
+                birth_date, car_model, car_year, car_color, distance_rate
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                driver["full_name"],
+                driver["first_name"],
+                driver["last_name"],
+                driver["mobile"],
+                driver["national_id"],
+                driver["birth_date"],
+                driver["car_model"],
+                driver["car_year"],
+                driver["car_color"],
+                float(driver["distance_rate"]),
+            ),
+        )
+
+    def update_driver(self, driver_id: int, data: dict[str, Any] | str) -> None:
+        driver = self._normalize_driver_data(data)
         self.execute(
-            "UPDATE drivers SET full_name = ? WHERE id = ?",
-            (full_name.strip(), driver_id),
+            """
+            UPDATE drivers
+            SET full_name = ?, first_name = ?, last_name = ?, mobile = ?,
+                national_id = ?, birth_date = ?, car_model = ?, car_year = ?,
+                car_color = ?, distance_rate = ?
+            WHERE id = ?
+            """,
+            (
+                driver["full_name"],
+                driver["first_name"],
+                driver["last_name"],
+                driver["mobile"],
+                driver["national_id"],
+                driver["birth_date"],
+                driver["car_model"],
+                driver["car_year"],
+                driver["car_color"],
+                float(driver["distance_rate"]),
+                driver_id,
+            ),
         )
 
     def delete_driver(self, driver_id: int) -> None:
         self.execute("DELETE FROM drivers WHERE id = ?", (driver_id,))
+
+    def _normalize_driver_data(self, data: dict[str, Any] | str) -> dict[str, Any]:
+        if isinstance(data, str):
+            first_name, last_name = self._split_full_name(data)
+            data = {"first_name": first_name, "last_name": last_name}
+
+        driver = {
+            "first_name": str(data.get("first_name", "")).strip(),
+            "last_name": str(data.get("last_name", "")).strip(),
+            "mobile": str(data.get("mobile", "")).strip(),
+            "national_id": str(data.get("national_id", "")).strip(),
+            "birth_date": str(data.get("birth_date", "")).strip(),
+            "car_model": str(data.get("car_model", "")).strip(),
+            "car_year": str(data.get("car_year", "")).strip(),
+            "car_color": str(data.get("car_color", "")).strip(),
+            "distance_rate": float(data.get("distance_rate") or 0),
+        }
+        driver["full_name"] = self._driver_full_name(driver)
+        return driver
+
+    @staticmethod
+    def _split_full_name(full_name: str) -> tuple[str, str]:
+        parts = full_name.strip().split(maxsplit=1)
+        if not parts:
+            return "", ""
+        if len(parts) == 1:
+            return parts[0], ""
+        return parts[0], parts[1]
+
+    @staticmethod
+    def _driver_full_name(data: dict[str, Any]) -> str:
+        return f"{data.get('first_name', '').strip()} {data.get('last_name', '').strip()}".strip()
 
     def list_categories(self) -> list[dict[str, Any]]:
         return self.fetch_all("SELECT id, title FROM categories ORDER BY title")
