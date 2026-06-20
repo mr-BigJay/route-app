@@ -114,7 +114,9 @@ class MissionsPage(Page):
     def _build_form_view(self) -> QWidget:
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
+        scroll.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         page = QWidget()
+        page.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         layout = QVBoxLayout(page)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(14)
@@ -129,6 +131,7 @@ class MissionsPage(Page):
         form_layout.addWidget(self.form_title)
 
         self.driver_combo = QComboBox()
+        self._prepare_input(self.driver_combo)
         self.driver_combo.currentIndexChanged.connect(self._update_driver_profile)
         self.driver_profile_label = QLabel("پروفایل راننده و خودرو پس از انتخاب راننده نمایش داده می‌شود.")
         self.driver_profile_label.setObjectName("profileInfo")
@@ -136,10 +139,12 @@ class MissionsPage(Page):
         form_layout.addWidget(self.driver_profile_label)
 
         self.date_input = QLineEdit()
+        self._prepare_input(self.date_input)
         self.date_input.setPlaceholderText("yyyy/mm/dd")
         self.date_input.setMaxLength(10)
         self.date_input.textEdited.connect(self._format_date)
         self.time_input = QLineEdit()
+        self._prepare_input(self.time_input)
         self.time_input.setPlaceholderText("HH:MM")
         form_layout.addWidget(
             self._two_field_row("تاریخ *", self.date_input, "ساعت *", self.time_input, 1, 1)
@@ -147,6 +152,8 @@ class MissionsPage(Page):
 
         self.origin_category_combo = QComboBox()
         self.origin_location_combo = QComboBox()
+        self._prepare_input(self.origin_category_combo)
+        self._prepare_input(self.origin_location_combo)
         self.origin_category_combo.currentIndexChanged.connect(
             lambda: self._populate_location_combo(
                 self.origin_category_combo,
@@ -175,18 +182,22 @@ class MissionsPage(Page):
         form_layout.addWidget(destinations_group)
 
         self.distance_input = QDoubleSpinBox()
+        self._prepare_input(self.distance_input)
         self.distance_input.setRange(0, 1_000_000)
         self.distance_input.setDecimals(1)
         self.distance_input.setSuffix(" km")
         self.passengers_input = QLineEdit()
+        self._prepare_input(self.passengers_input)
         self.passengers_input.setPlaceholderText("مثال: علی احمدی و رضا محمدی")
         self.description_input = QPlainTextEdit()
+        self._prepare_input(self.description_input)
         self.description_input.setFixedHeight(74)
         form_layout.addWidget(self._labeled_row("مسافت *", self.distance_input))
         form_layout.addWidget(self._labeled_row("سرنشینان", self.passengers_input))
         form_layout.addWidget(self._labeled_row("توضیحات", self.description_input))
 
         buttons = QHBoxLayout()
+        buttons.setDirection(QHBoxLayout.Direction.RightToLeft)
         self.save_button = self.action_button("ثبت")
         back_button = self.action_button("بازگشت", "ghost")
         self.save_button.clicked.connect(self.save_mission)
@@ -246,12 +257,16 @@ class MissionsPage(Page):
 
     def _labeled_row(self, label: str, widget: QWidget) -> QWidget:
         row = QWidget()
+        row.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         layout = QHBoxLayout(row)
+        layout.setDirection(QHBoxLayout.Direction.RightToLeft)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
         label_widget = QLabel(label)
         label_widget.setMinimumWidth(130)
-        layout.addWidget(widget, stretch=1)
+        label_widget.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         layout.addWidget(label_widget)
+        layout.addWidget(widget, stretch=1)
         return row
 
     def _two_field_row(
@@ -264,14 +279,31 @@ class MissionsPage(Page):
         stretch_b: int,
     ) -> QWidget:
         row = QWidget()
+        row.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         layout = QHBoxLayout(row)
+        layout.setDirection(QHBoxLayout.Direction.RightToLeft)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
-        layout.addWidget(widget_b, stretch=stretch_b)
-        layout.addWidget(QLabel(label_b))
+        label_a_widget = QLabel(label_a)
+        label_b_widget = QLabel(label_b)
+        label_a_widget.setMinimumWidth(110)
+        label_b_widget.setMinimumWidth(110)
+        label_a_widget.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        label_b_widget.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        layout.addWidget(label_a_widget)
         layout.addWidget(widget_a, stretch=stretch_a)
-        layout.addWidget(QLabel(label_a))
+        layout.addWidget(label_b_widget)
+        layout.addWidget(widget_b, stretch=stretch_b)
         return row
+
+    def _prepare_input(self, widget: QWidget) -> None:
+        widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        if isinstance(widget, QLineEdit):
+            widget.setAlignment(Qt.AlignmentFlag.AlignRight)
+        elif isinstance(widget, QPlainTextEdit):
+            widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        elif isinstance(widget, QDoubleSpinBox):
+            widget.setAlignment(Qt.AlignmentFlag.AlignRight)
 
     def refresh(self) -> None:
         self._refresh_home()
@@ -397,11 +429,15 @@ class MissionsPage(Page):
             show_error(self, "حداکثر 10 مقصد قابل ثبت است.")
             return
         row = QWidget()
+        row.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         layout = QHBoxLayout(row)
+        layout.setDirection(QHBoxLayout.Direction.RightToLeft)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
         category_combo = QComboBox()
         location_combo = QComboBox()
+        self._prepare_input(category_combo)
+        self._prepare_input(location_combo)
         remove_button = QPushButton("×")
         remove_button.setFixedWidth(34)
         remove_button.setProperty("role", "danger")
@@ -417,11 +453,17 @@ class MissionsPage(Page):
         self._populate_location_combo(category_combo, location_combo)
         if selected_location:
             location_combo.setCurrentText(selected_location)
-        layout.addWidget(remove_button)
-        layout.addWidget(location_combo, stretch=65)
-        layout.addWidget(QLabel("نقطه مقصد *"))
+        category_label = QLabel("دسته‌بندی مقصد *")
+        location_label = QLabel("نقطه مقصد *")
+        category_label.setMinimumWidth(120)
+        location_label.setMinimumWidth(110)
+        category_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        location_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        layout.addWidget(category_label)
         layout.addWidget(category_combo, stretch=35)
-        layout.addWidget(QLabel("دسته‌بندی مقصد *"))
+        layout.addWidget(location_label)
+        layout.addWidget(location_combo, stretch=65)
+        layout.addWidget(remove_button)
         self.destinations_container.addWidget(row)
         self.destination_rows.append((row, category_combo, location_combo))
         if len(self.destination_rows) == 1:

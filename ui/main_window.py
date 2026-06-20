@@ -47,11 +47,13 @@ class MainWindow(QMainWindow):
         central = QWidget()
         central.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         main_layout = QHBoxLayout(central)
-        main_layout.setDirection(QHBoxLayout.Direction.RightToLeft)
+        # Physical placement: content on the left, sidebar on the right.
+        # Child widgets keep RTL layout direction for text and controls.
+        main_layout.setDirection(QHBoxLayout.Direction.LeftToRight)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
-        main_layout.addWidget(self._build_sidebar())
         main_layout.addWidget(self.stack, stretch=1)
+        main_layout.addWidget(self._build_sidebar())
         self.setCentralWidget(central)
         self._build_status_bar()
         self._select_page(0)

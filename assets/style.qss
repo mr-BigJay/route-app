@@ -182,6 +182,10 @@ QPlainTextEdit {
     selection-background-color: #2563EB;
 }
 
+QLineEdit {
+    qproperty-alignment: AlignRight;
+}
+
 QGroupBox {
     background: #FFFFFF;
     border: 1px solid #E2E8F0;
