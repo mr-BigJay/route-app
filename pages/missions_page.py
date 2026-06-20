@@ -137,8 +137,18 @@ class MissionsPage(Page):
         self.driver_combo.currentIndexChanged.connect(self._update_driver_profile)
         self.driver_profile_label = QLabel("پروفایل راننده و خودرو پس از انتخاب راننده نمایش داده می‌شود.")
         self.driver_profile_label.setObjectName("profileInfo")
-        form_layout.addWidget(self._labeled_row("راننده *", self.driver_combo))
-        form_layout.addWidget(self.driver_profile_label)
+        self.driver_profile_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.driver_profile_label.setMinimumHeight(38)
+        form_layout.addWidget(
+            self._two_field_row(
+                "راننده *",
+                self.driver_combo,
+                "پروفایل راننده و خودرو",
+                self.driver_profile_label,
+                35,
+                65,
+            )
+        )
 
         self.date_input = QLineEdit()
         self._prepare_input(self.date_input)
@@ -162,16 +172,22 @@ class MissionsPage(Page):
                 self.origin_location_combo,
             )
         )
-        form_layout.addWidget(
+        origin_group = QGroupBox("مبدا")
+        origin_group.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        origin_layout = QVBoxLayout(origin_group)
+        origin_layout.setContentsMargins(12, 14, 12, 12)
+        origin_layout.setSpacing(10)
+        origin_layout.addWidget(
             self._two_field_row(
-                "مبدا - دسته‌بندی *",
+                "دسته‌بندی مبدا *",
                 self.origin_category_combo,
-                "مبدا - نقطه *",
+                "نقطه مبدا *",
                 self.origin_location_combo,
                 35,
                 65,
             )
         )
+        form_layout.addWidget(origin_group)
 
         destinations_group = QGroupBox("مقصدها")
         destinations_group.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
