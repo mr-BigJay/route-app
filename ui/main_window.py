@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QTimer, Qt
+from PySide6.QtCore import QSize, QTimer, Qt
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -21,14 +22,20 @@ from pages.drivers_page import DriversPage
 from pages.locations_page import LocationsPage
 from pages.missions_page import MissionsPage
 from pages.reports_page import ReportsPage
-from ui.utils import APP_VERSION, current_time_text, gregorian_to_jalali, to_persian_digits
+from ui.utils import (
+    APP_VERSION,
+    current_time_text,
+    gregorian_to_jalali,
+    persian_weekday_name,
+    to_persian_digits,
+)
 
 
 class MainWindow(QMainWindow):
     def __init__(self, db: DatabaseManager) -> None:
         super().__init__()
         self.db = db
-        self.setWindowTitle("Route - مدیریت ماموریت خودروها")
+        self.setWindowTitle("Route v.1 - مدیریت ماموریت خودروها")
         self.setMinimumSize(1180, 760)
         self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.nav_buttons: list[QPushButton] = []
@@ -70,7 +77,7 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(18, 24, 18, 24)
         layout.setSpacing(12)
 
-        logo = QLabel("Route")
+        logo = QLabel("Route v.1")
         logo.setObjectName("logo")
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         subtitle = QLabel("مدیریت ماموریت خودروها")
@@ -80,32 +87,48 @@ class MainWindow(QMainWindow):
         layout.addWidget(subtitle)
         layout.addSpacing(22)
 
+        icons_dir = Path(__file__).resolve().parent.parent / "assets" / "icons"
         items = [
-            ("داشبورد", "⌂"),
-            ("مدیریت رانندگان", "◯"),
-            ("مدیریت نقاط", "◇"),
-            ("ماموریت‌ها", "□"),
-            ("گزارشات", "▥"),
+            ("داشبورد", icons_dir / "nav_dashboard.svg"),
+            ("مدیریت رانندگان", icons_dir / "nav_drivers.svg"),
+            ("مدیریت نقاط", icons_dir / "nav_locations.svg"),
+            ("ماموریت‌ها", icons_dir / "nav_missions.svg"),
+            ("گزارشات", icons_dir / "nav_reports.svg"),
         ]
-        for index, (title, icon) in enumerate(items):
-            button = QPushButton(f"{icon}  {title}")
+        for index, (title, icon_path) in enumerate(items):
+            button = QPushButton(title)
             button.setObjectName("navButton")
+            button.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+            button.setIcon(QIcon(str(icon_path)))
+            button.setIconSize(QSize(24, 24))
             button.setCursor(Qt.CursorShape.PointingHandCursor)
             button.clicked.connect(lambda checked=False, page=index: self._select_page(page))
             self.nav_buttons.append(button)
             layout.addWidget(button)
 
         layout.addStretch(1)
+        self.weekday_label = QLabel(persian_weekday_name())
+        self.weekday_label.setObjectName("weekdayLabel")
         self.date_label = QLabel(to_persian_digits(gregorian_to_jalali()))
         self.time_label = QLabel(to_persian_digits(current_time_text()))
         date_card = QFrame()
         date_card.setObjectName("dateCard")
         date_layout = QVBoxLayout(date_card)
         date_layout.setSpacing(8)
-        date_layout.addWidget(QLabel("امروز"), alignment=Qt.AlignmentFlag.AlignCenter)
+        date_layout.addWidget(self.weekday_label, alignment=Qt.AlignmentFlag.AlignCenter)
         date_layout.addWidget(self.date_label, alignment=Qt.AlignmentFlag.AlignCenter)
         date_layout.addWidget(self.time_label, alignment=Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(date_card)
+
+        footer = QLabel(
+            "طراحی و توسعه\n"
+            "صادق جعفری با همکاری علیرضا محمدرضایی\n"
+            "کارشناس IT - شبکه بهداشت رودسر"
+        )
+        footer.setObjectName("sidebarFooter")
+        footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        footer.setWordWrap(True)
+        layout.addWidget(footer)
 
         timer = QTimer(self)
         timer.timeout.connect(self._tick)
@@ -133,5 +156,6 @@ class MainWindow(QMainWindow):
             page.refresh()
 
     def _tick(self) -> None:
+        self.weekday_label.setText(persian_weekday_name())
         self.date_label.setText(to_persian_digits(gregorian_to_jalali()))
         self.time_label.setText(to_persian_digits(current_time_text()))

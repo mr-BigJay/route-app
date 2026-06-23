@@ -80,6 +80,20 @@ QPushButton#navButton {
     border: none;
     text-align: right;
     padding: 12px 14px;
+    qproperty-iconSize: 24px 24px;
+}
+
+QLabel#weekdayLabel {
+    color: #1E3A8A;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+QLabel#sidebarFooter {
+    color: #64748B;
+    font-size: 10px;
+    line-height: 160%;
+    padding-top: 8px;
 }
 
 QPushButton#navButton:hover {

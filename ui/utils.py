@@ -76,6 +76,22 @@ def current_time_text() -> str:
     return datetime.now().strftime("%H:%M:%S")
 
 
+PERSIAN_WEEKDAYS = (
+    "دوشنبه",
+    "سه شنبه",
+    "چهارشنبه",
+    "پنج شنبه",
+    "جمعه",
+    "شنبه",
+    "یکشنبه",
+)
+
+
+def persian_weekday_name(g_date: date | None = None) -> str:
+    g_date = g_date or date.today()
+    return PERSIAN_WEEKDAYS[g_date.weekday()]
+
+
 def load_vazirmatn_font(fonts_dir: Path) -> str:
     font_family = "Vazirmatn"
     for font_path in fonts_dir.glob("Vazirmatn*.ttf"):
