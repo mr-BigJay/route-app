@@ -83,9 +83,18 @@ class MainWindow(QMainWindow):
         subtitle = QLabel("مدیریت ماموریت خودروها")
         subtitle.setObjectName("sidebarSubtitle")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        network = QLabel("شبکه بهداشت و درمان شهرستان")
+        network.setObjectName("sidebarNetwork")
+        network.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        network.setWordWrap(True)
+        city = QLabel("رودسر")
+        city.setObjectName("sidebarCity")
+        city.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(logo)
         layout.addWidget(subtitle)
-        layout.addSpacing(22)
+        layout.addWidget(network)
+        layout.addWidget(city)
+        layout.addSpacing(18)
 
         icons_dir = Path(__file__).resolve().parent.parent / "assets" / "icons"
         items = [

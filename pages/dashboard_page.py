@@ -8,10 +8,10 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
     QHeaderView,
-    QLabel,
     QMessageBox,
     QPushButton,
     QScrollArea,
+    QTabWidget,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -61,17 +61,37 @@ class DashboardPage(Page):
         content_layout.addLayout(self.stats_layout)
 
         self.missions_table = self._create_table("dashboardTable")
-        content_layout.addWidget(
-            self._build_table_card("ماموریت‌های اخیر", "dashboardMissionsHeader", self.missions_table),
-            stretch=2,
-        )
         self.reservations_table = self._create_table("dashboardReservationsTable")
-        content_layout.addWidget(
-            self._build_table_card("لیست رزرو ماموریت", "dashboardReservationsHeader", self.reservations_table),
-            stretch=1,
-        )
+        content_layout.addWidget(self._build_tables_tabs(), stretch=2)
         self.root_layout.addWidget(self.content_area, stretch=1)
         self._build_mission_overlay()
+
+    def _build_tables_tabs(self) -> QFrame:
+        card = self.card()
+        card.setObjectName("dashboardTableCard")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        self.tables_tabs = QTabWidget()
+        self.tables_tabs.setObjectName("dashboardTablesTabs")
+        self.tables_tabs.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+
+        missions_tab = QWidget()
+        missions_layout = QVBoxLayout(missions_tab)
+        missions_layout.setContentsMargins(18, 12, 18, 16)
+        missions_layout.addWidget(self.missions_table)
+
+        reservations_tab = QWidget()
+        reservations_layout = QVBoxLayout(reservations_tab)
+        reservations_layout.setContentsMargins(18, 12, 18, 16)
+        reservations_layout.addWidget(self.reservations_table)
+
+        self.tables_tabs.addTab(missions_tab, "ماموریت‌های اخیر")
+        self.tables_tabs.addTab(reservations_tab, "رزرو ماموریت")
+        self.tables_tabs.setCurrentIndex(0)
+        layout.addWidget(self.tables_tabs)
+        return card
 
     def _center_page_header(self) -> None:
         header = self.root_layout.itemAt(0).widget()
@@ -98,34 +118,6 @@ class DashboardPage(Page):
         table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         table.setAlternatingRowColors(True)
         return table
-
-    def _build_table_card(self, title_text: str, header_object_name: str, table: QTableWidget) -> QFrame:
-        card = self.card()
-        card.setObjectName("dashboardTableCard")
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-
-        header = QFrame()
-        header.setObjectName(header_object_name)
-        header.setProperty("dashboardHeader", True)
-        header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(18, 14, 18, 14)
-        title = QLabel(title_text)
-        title.setObjectName("dashboardTableTitle")
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        header_layout.addStretch(1)
-        header_layout.addWidget(title)
-        header_layout.addStretch(1)
-
-        body = QFrame()
-        body_layout = QVBoxLayout(body)
-        body_layout.setContentsMargins(18, 12, 18, 16)
-        body_layout.addWidget(table)
-
-        layout.addWidget(header)
-        layout.addWidget(body)
-        return card
 
     def _build_mission_overlay(self) -> None:
         self.mission_overlay = QFrame(self)

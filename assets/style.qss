@@ -20,10 +20,24 @@ QLabel#logo {
 }
 
 QLabel#sidebarSubtitle,
+QLabel#sidebarNetwork,
 QLabel#pageSubtitle,
 QLabel#statTitle {
     color: #64748B;
     font-size: 12px;
+}
+
+QLabel#sidebarNetwork {
+    font-size: 11px;
+    line-height: 140%;
+    padding: 0 4px;
+}
+
+QLabel#sidebarCity {
+    color: #1E3A8A;
+    font-size: 24px;
+    font-weight: 800;
+    padding-top: 2px;
 }
 
 QLabel#pageTitle {
@@ -454,6 +468,42 @@ QFrame#dashboardTableCard {
     background: #FFFFFF;
     border: 1px solid #BFDBFE;
     border-radius: 18px;
+}
+
+QTabWidget#dashboardTablesTabs::pane {
+    border: none;
+    background: #FFFFFF;
+    border-bottom-left-radius: 17px;
+    border-bottom-right-radius: 17px;
+    top: -1px;
+}
+
+QTabWidget#dashboardTablesTabs QTabBar {
+    background: transparent;
+}
+
+QTabWidget#dashboardTablesTabs QTabBar::tab {
+    background: #EFF6FF;
+    color: #475569;
+    border: 1px solid #BFDBFE;
+    border-bottom: none;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    padding: 11px 26px;
+    margin-left: 6px;
+    font-weight: 700;
+    min-width: 120px;
+}
+
+QTabWidget#dashboardTablesTabs QTabBar::tab:selected {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1E3A8A, stop:1 #2563EB);
+    color: #FFFFFF;
+    border-color: #2563EB;
+}
+
+QTabWidget#dashboardTablesTabs QTabBar::tab:hover:!selected {
+    background: #DBEAFE;
+    color: #1D4ED8;
 }
 
 QFrame#dashboardMissionsHeader,
