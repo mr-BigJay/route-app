@@ -89,11 +89,11 @@ class MainWindow(QMainWindow):
 
         icons_dir = Path(__file__).resolve().parent.parent / "assets" / "icons"
         items = [
-            ("داشبورد", icons_dir / "nav_dashboard.svg"),
-            ("مدیریت رانندگان", icons_dir / "nav_drivers.svg"),
-            ("مدیریت نقاط", icons_dir / "nav_locations.svg"),
-            ("ماموریت‌ها", icons_dir / "nav_missions.svg"),
-            ("گزارشات", icons_dir / "nav_reports.svg"),
+            ("داشبورد", icons_dir / "nav_1.svg"),
+            ("مدیریت رانندگان", icons_dir / "nav_2.svg"),
+            ("مدیریت نقاط", icons_dir / "nav_3.svg"),
+            ("ماموریت‌ها", icons_dir / "nav_4.svg"),
+            ("گزارشات", icons_dir / "nav_5.svg"),
         ]
         for index, (title, icon_path) in enumerate(items):
             button = QPushButton(title)
