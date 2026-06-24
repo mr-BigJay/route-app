@@ -140,9 +140,13 @@ QFrame#driverFormCard QLabel#fieldLabel {
     qproperty-alignment: AlignRight;
 }
 
-QFrame#driverFormCard QLineEdit,
-QFrame#driverFormCard QComboBox {
+QFrame#driverFormCard QLineEdit {
     qproperty-alignment: AlignRight;
+}
+
+QFrame#driverFormCard QComboBox {
+    padding-right: 12px;
+    padding-left: 36px;
 }
 
 QFrame#card,
