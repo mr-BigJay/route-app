@@ -61,6 +61,78 @@ QLabel#activeDriversCount {
     font-weight: 800;
 }
 
+QFrame#driversSummaryCard {
+    background: #FFFFFF;
+    border: 1px solid #BFDBFE;
+    border-radius: 16px;
+    min-width: 520px;
+}
+
+QLabel#driversSummaryTitle {
+    color: #64748B;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+QLabel#driversSummaryValue,
+QLabel#driversSummaryValueActive,
+QLabel#driversSummaryValueInactive {
+    font-size: 28px;
+    font-weight: 800;
+}
+
+QLabel#driversSummaryValue {
+    color: #1E3A8A;
+}
+
+QLabel#driversSummaryValueActive {
+    color: #15803D;
+}
+
+QLabel#driversSummaryValueInactive {
+    color: #B45309;
+}
+
+QFrame#driverFormCard {
+    background: #FFFFFF;
+    border: 1px solid #BFDBFE;
+    border-radius: 18px;
+}
+
+QFrame#driverFormTitleBar {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1E3A8A, stop:1 #2563EB);
+    border-top-left-radius: 17px;
+    border-top-right-radius: 17px;
+}
+
+QLabel#driverFormTitle {
+    color: #FFFFFF;
+    font-size: 16px;
+    font-weight: 700;
+    background: transparent;
+}
+
+QScrollArea#driverFormScroll {
+    background: transparent;
+    border: none;
+}
+
+QGroupBox#driverFormGroup {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    margin-top: 14px;
+    padding: 14px 12px 12px 12px;
+    font-weight: 700;
+}
+
+QGroupBox#driverFormGroup::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top right;
+    padding: 0 10px;
+    color: #1E3A8A;
+}
+
 QFrame#card,
 QFrame#statCard {
     background: #FFFFFF;

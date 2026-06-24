@@ -8,7 +8,6 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
     QFileDialog,
-    QFormLayout,
     QFrame,
     QGraphicsBlurEffect,
     QGroupBox,
@@ -18,11 +17,13 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QStackedWidget,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
+    QWidget,
 )
 
 from database.db import DatabaseError, DatabaseManager
@@ -48,9 +49,8 @@ class DriversPage(Page):
         self._formatting_birth_date = False
         self._formatting_distance_rate = False
 
-        self.active_count_label = QLabel()
-        self.active_count_label.setObjectName("activeDriversCount")
-        self.root_layout.addWidget(self.active_count_label, alignment=Qt.AlignmentFlag.AlignRight)
+        self.drivers_summary_card = self._build_drivers_summary()
+        self.root_layout.addWidget(self.drivers_summary_card, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         self.stack = QStackedWidget()
         self.stack.addWidget(self._build_options_view())
@@ -59,6 +59,42 @@ class DriversPage(Page):
         self.root_layout.addWidget(self.stack, stretch=1)
         self._build_profile_overlay()
         self._refresh_active_count()
+
+    def _build_drivers_summary(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("driversSummaryCard")
+        layout = QHBoxLayout(card)
+        layout.setContentsMargins(28, 18, 28, 18)
+        layout.setSpacing(36)
+
+        self.total_count_label = QLabel(to_persian_digits(0))
+        self.total_count_label.setObjectName("driversSummaryValue")
+        self.active_count_label = QLabel(to_persian_digits(0))
+        self.active_count_label.setObjectName("driversSummaryValueActive")
+        self.inactive_count_label = QLabel(to_persian_digits(0))
+        self.inactive_count_label.setObjectName("driversSummaryValueInactive")
+
+        for title, value_label in [
+            ("کل رانندگان", self.total_count_label),
+            ("رانندگان فعال", self.active_count_label),
+            ("رانندگان غیرفعال", self.inactive_count_label),
+        ]:
+            layout.addWidget(self._summary_stat_block(title, value_label))
+
+        return card
+
+    def _summary_stat_block(self, title: str, value_label: QLabel) -> QWidget:
+        block = QWidget()
+        block_layout = QVBoxLayout(block)
+        block_layout.setContentsMargins(0, 0, 0, 0)
+        block_layout.setSpacing(6)
+        title_label = QLabel(title)
+        title_label.setObjectName("driversSummaryTitle")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        block_layout.addWidget(title_label)
+        block_layout.addWidget(value_label)
+        return block
 
     def _build_options_view(self) -> QFrame:
         card = self.card()
@@ -92,23 +128,43 @@ class DriversPage(Page):
 
     def _build_form_view(self) -> QFrame:
         card = self.card()
+        card.setObjectName("driverFormCard")
+        card.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(18, 16, 18, 16)
-        layout.setSpacing(14)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
+        title_bar = QFrame()
+        title_bar.setObjectName("driverFormTitleBar")
+        title_layout = QHBoxLayout(title_bar)
+        title_layout.setContentsMargins(18, 14, 18, 14)
         self.form_title = QLabel("ثبت راننده جدید")
-        self.form_title.setObjectName("sectionTitle")
+        self.form_title.setObjectName("driverFormTitle")
+        self.form_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_layout.addStretch(1)
+        title_layout.addWidget(self.form_title)
+        title_layout.addStretch(1)
+
+        form_body = QWidget()
+        form_body.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        body_layout = QVBoxLayout(form_body)
+        body_layout.setContentsMargins(20, 18, 20, 18)
+        body_layout.setSpacing(14)
 
         personal_group = QGroupBox("اطلاعات فردی")
-        personal_form = QFormLayout(personal_group)
-        personal_form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+        personal_group.setObjectName("driverFormGroup")
+        personal_group.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        personal_layout = QVBoxLayout(personal_group)
+        personal_layout.setContentsMargins(12, 14, 12, 12)
+        personal_layout.setSpacing(10)
+
         self.first_name_input = QLineEdit()
         self.first_name_input.setPlaceholderText("فقط حروف فارسی")
         self.last_name_input = QLineEdit()
         self.last_name_input.setPlaceholderText("فقط حروف فارسی")
         self.mobile_input = QLineEdit()
-        self.mobile_input.setPlaceholderText("مثال: 0912345678")
-        self.mobile_input.setMaxLength(10)
+        self.mobile_input.setPlaceholderText("مثال: 09123456789")
+        self.mobile_input.setMaxLength(11)
         self.national_id_input = QLineEdit()
         self.national_id_input.setPlaceholderText("۱۰ رقم")
         self.national_id_input.setMaxLength(10)
@@ -117,15 +173,23 @@ class DriversPage(Page):
         self.birth_date_input.setMaxLength(10)
         self.birth_date_input.textEdited.connect(self._format_birth_date)
 
-        personal_form.addRow("نام *", self.first_name_input)
-        personal_form.addRow("نام خانوادگی *", self.last_name_input)
-        personal_form.addRow("شماره موبایل راننده *", self.mobile_input)
-        personal_form.addRow("شماره ملی راننده *", self.national_id_input)
-        personal_form.addRow("تاریخ تولد *", self.birth_date_input)
+        for label, widget in [
+            ("نام *", self.first_name_input),
+            ("نام خانوادگی *", self.last_name_input),
+            ("شماره موبایل راننده *", self.mobile_input),
+            ("شماره ملی راننده *", self.national_id_input),
+            ("تاریخ تولد *", self.birth_date_input),
+        ]:
+            self._prepare_input(widget)
+            personal_layout.addWidget(self._field_box(label, widget))
 
         vehicle_group = QGroupBox("اطلاعات خودرو")
-        vehicle_form = QFormLayout(vehicle_group)
-        vehicle_form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+        vehicle_group.setObjectName("driverFormGroup")
+        vehicle_group.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        vehicle_layout = QVBoxLayout(vehicle_group)
+        vehicle_layout.setContentsMargins(12, 14, 12, 12)
+        vehicle_layout.setSpacing(10)
+
         self.car_model_input = QLineEdit()
         self.car_model_input.setPlaceholderText("مثال: سمند")
         self.car_year_input = QLineEdit()
@@ -137,25 +201,59 @@ class DriversPage(Page):
         self.distance_rate_input.setPlaceholderText("مثال: 230,000")
         self.distance_rate_input.textEdited.connect(self._format_distance_rate)
 
-        vehicle_form.addRow("مدل ماشین *", self.car_model_input)
-        vehicle_form.addRow("سال تولید ماشین *", self.car_year_input)
-        vehicle_form.addRow("رنگ ماشین *", self.car_color_input)
-        vehicle_form.addRow("نرخ محاسبه به ریال *", self.distance_rate_input)
+        for label, widget in [
+            ("مدل ماشین *", self.car_model_input),
+            ("سال تولید ماشین *", self.car_year_input),
+            ("رنگ ماشین *", self.car_color_input),
+            ("نرخ محاسبه به ریال *", self.distance_rate_input),
+        ]:
+            self._prepare_input(widget)
+            vehicle_layout.addWidget(self._field_box(label, widget))
 
         buttons = QHBoxLayout()
+        buttons.setDirection(QHBoxLayout.Direction.RightToLeft)
+        buttons.setSpacing(10)
         self.save_button = self.action_button("ثبت")
         back_button = self.action_button("بازگشت", "ghost")
         self.save_button.clicked.connect(self.save_driver)
         back_button.clicked.connect(self.back_to_options)
+        buttons.addStretch(1)
         buttons.addWidget(self.save_button)
         buttons.addWidget(back_button)
 
-        layout.addWidget(self.form_title)
-        layout.addWidget(personal_group)
-        layout.addWidget(vehicle_group)
-        layout.addLayout(buttons)
-        layout.addStretch(1)
+        body_layout.addWidget(personal_group)
+        body_layout.addWidget(vehicle_group)
+        body_layout.addLayout(buttons)
+
+        scroll = QScrollArea()
+        scroll.setObjectName("driverFormScroll")
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setWidget(form_body)
+
+        layout.addWidget(title_bar)
+        layout.addWidget(scroll)
         return card
+
+    def _field_box(self, label: str, widget: QWidget) -> QFrame:
+        box = QFrame()
+        box.setObjectName("fieldBox")
+        box.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        layout = QVBoxLayout(box)
+        layout.setContentsMargins(10, 8, 10, 10)
+        layout.setSpacing(6)
+        label_widget = QLabel(label)
+        label_widget.setObjectName("fieldLabel")
+        label_widget.setAlignment(Qt.AlignmentFlag.AlignRight)
+        layout.addWidget(label_widget)
+        layout.addWidget(widget)
+        return box
+
+    def _prepare_input(self, widget: QLineEdit) -> None:
+        widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        widget.setAlignment(Qt.AlignmentFlag.AlignRight)
+        widget.setMinimumHeight(36)
 
     def _build_list_view(self) -> QFrame:
         card = self.card()
@@ -329,8 +427,8 @@ class DriversPage(Page):
         if not self._is_persian_text(data["last_name"]):
             show_error(self, "نام خانوادگی فقط باید شامل حروف فارسی باشد.")
             return None
-        if not re.fullmatch(r"09\d{8}", data["mobile"]):
-            show_error(self, "شماره موبایل باید با 09 شروع شود و 10 رقم باشد.")
+        if not re.fullmatch(r"09\d{9}", data["mobile"]):
+            show_error(self, "شماره موبایل باید با 09 شروع شود و 11 رقم باشد.")
             return None
         if not re.fullmatch(r"\d{10}", data["national_id"]):
             show_error(self, "شماره ملی باید دقیقاً 10 رقم باشد.")
@@ -641,8 +739,13 @@ class DriversPage(Page):
             self.clear_driver_checks()
 
     def _refresh_active_count(self) -> None:
-        active_count = sum(1 for driver in self.db.list_drivers() if int(driver.get("is_active", 1)))
-        self.active_count_label.setText(f"تعداد رانندگان فعال: {to_persian_digits(active_count)}")
+        drivers = self.db.list_drivers()
+        total = len(drivers)
+        active_count = sum(1 for driver in drivers if int(driver.get("is_active", 1)))
+        inactive_count = total - active_count
+        self.total_count_label.setText(to_persian_digits(total))
+        self.active_count_label.setText(to_persian_digits(active_count))
+        self.inactive_count_label.setText(to_persian_digits(inactive_count))
 
     def clear_form(self) -> None:
         for line_edit in [
