@@ -174,10 +174,7 @@ class DriversPage(Page):
         personal_layout = QVBoxLayout(personal_group)
         personal_layout.setContentsMargins(12, 14, 12, 12)
         personal_layout.setSpacing(10)
-        personal_title = QLabel("اطلاعات فردی")
-        personal_title.setObjectName("driverSectionTitle")
-        personal_title.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        personal_layout.addWidget(personal_title)
+        personal_layout.addWidget(self._right_label_row("اطلاعات فردی", "driverSectionTitle"))
 
         self.first_name_input = QLineEdit()
         self.first_name_input.setPlaceholderText("فقط حروف فارسی")
@@ -221,10 +218,7 @@ class DriversPage(Page):
         vehicle_layout = QVBoxLayout(vehicle_group)
         vehicle_layout.setContentsMargins(12, 14, 12, 12)
         vehicle_layout.setSpacing(10)
-        vehicle_title = QLabel("اطلاعات خودرو")
-        vehicle_title.setObjectName("driverSectionTitle")
-        vehicle_title.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        vehicle_layout.addWidget(vehicle_title)
+        vehicle_layout.addWidget(self._right_label_row("اطلاعات خودرو", "driverSectionTitle"))
 
         self.car_model_input = QLineEdit()
         self.car_model_input.setPlaceholderText("مثال: سمند")
@@ -299,6 +293,19 @@ class DriversPage(Page):
         layout.addWidget(self._field_box(label_a, widget_a), stretch=stretch_a)
         return row
 
+    def _right_label_row(self, text: str, object_name: str) -> QWidget:
+        row = QWidget()
+        row.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(0, 0, 0, 0)
+        label = QLabel(text)
+        label.setObjectName(object_name)
+        label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        layout.addWidget(label)
+        layout.addStretch(1)
+        return row
+
     def _field_box(self, label: str, widget: QWidget) -> QFrame:
         box = QFrame()
         box.setObjectName("driverFieldBox")
@@ -306,38 +313,45 @@ class DriversPage(Page):
         layout = QVBoxLayout(box)
         layout.setContentsMargins(10, 8, 10, 10)
         layout.setSpacing(6)
-        label_row = QWidget()
-        label_row.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        label_layout = QHBoxLayout(label_row)
-        label_layout.setContentsMargins(0, 0, 0, 0)
-        label_widget = QLabel(label)
-        label_widget.setObjectName("fieldLabel")
-        label_widget.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        label_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        label_layout.addWidget(label_widget)
-        label_layout.addStretch(1)
-        layout.addWidget(label_row)
+        layout.addWidget(self._right_label_row(label, "fieldLabel"))
         widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         layout.addWidget(widget)
         return box
 
     def _prepare_input(self, widget: QLineEdit) -> None:
-        widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        widget.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        widget.setObjectName("driverFormInput")
         widget.setMinimumHeight(36)
         widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self._ensure_input_alignment(widget)
+
+    def _ensure_input_alignment(self, widget: QLineEdit) -> None:
+        widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        widget.setAttribute(Qt.WidgetAttribute.WA_RightToLeft, True)
+        placeholder = widget.placeholderText()
+        if placeholder:
+            widget.setPlaceholderText("")
+            widget.setPlaceholderText(placeholder)
+        widget.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
     def _prepare_combo(self, combo: QComboBox) -> None:
+        combo.setObjectName("driverFormInput")
         combo.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        combo.setAttribute(Qt.WidgetAttribute.WA_RightToLeft, True)
         combo.setMinimumHeight(36)
         combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         combo.setEditable(True)
-        line_edit = combo.lineEdit()
-        if line_edit is not None:
-            line_edit.setReadOnly(True)
-            line_edit.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-            line_edit.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        combo.currentTextChanged.connect(lambda _text: self._ensure_combo_alignment(combo))
+        self._ensure_combo_alignment(combo)
         combo.view().setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+
+    def _ensure_combo_alignment(self, combo: QComboBox) -> None:
+        line_edit = combo.lineEdit()
+        if line_edit is None:
+            return
+        line_edit.setReadOnly(True)
+        line_edit.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        line_edit.setAttribute(Qt.WidgetAttribute.WA_RightToLeft, True)
+        line_edit.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
     def _update_distance_rate_visibility(self) -> None:
         is_rental = self.vehicle_status_combo.currentText() == VEHICLE_STATUS_RENTAL
@@ -891,6 +905,7 @@ class DriversPage(Page):
             formatted = f"{digits[:4]}/{digits[4:6]}/{digits[6:]}"
         self.birth_date_input.setText(to_persian_digits(formatted))
         self.birth_date_input.setCursorPosition(len(formatted))
+        self._ensure_input_alignment(self.birth_date_input)
         self._formatting_birth_date = False
 
     def _format_distance_rate(self, text: str) -> None:
@@ -901,6 +916,7 @@ class DriversPage(Page):
         formatted = self._format_number(number) if number else ""
         self.distance_rate_input.setText(formatted)
         self.distance_rate_input.setCursorPosition(len(formatted))
+        self._ensure_input_alignment(self.distance_rate_input)
         self._formatting_distance_rate = False
 
     def _driver_by_id(self, driver_id: int) -> dict | None:
