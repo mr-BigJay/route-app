@@ -4,14 +4,18 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
+    QFrame,
+    QGraphicsBlurEffect,
     QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QPushButton,
     QSpinBox,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
+    QWidget,
 )
 
 from database.db import DatabaseError, DatabaseManager
@@ -20,103 +24,239 @@ from ui.utils import Page, confirm, make_stat_card, show_error, show_success, to
 
 PERMANENT_CATEGORY_TITLES = ["ستاد", "بیمارستان", "مرکز درمانی", "خانه بهداشت"]
 
+CATEGORY_STAT_LABELS = {
+    "ستاد": "ستادها",
+    "بیمارستان": "بیمارستان ها",
+    "مرکز درمانی": "مراکز درمانی",
+    "خانه بهداشت": "خانه های بهداشت",
+}
+
 
 class LocationsPage(Page):
     def __init__(self, db: DatabaseManager) -> None:
         super().__init__("مدیریت نقاط", "مدیریت دسته‌بندی‌ها و نقاط ماموریت")
+        self.setObjectName("locationsPage")
         self.db = db
         self.selected_category_id: int | None = None
         self.selected_location_id: int | None = None
 
+        self.page_content = QWidget()
+        page_content_layout = QVBoxLayout(self.page_content)
+        page_content_layout.setContentsMargins(0, 0, 0, 0)
+        page_content_layout.setSpacing(16)
+
         self.stats_layout = QGridLayout()
         self.stats_layout.setSpacing(12)
-        self.root_layout.addLayout(self.stats_layout)
+        page_content_layout.addLayout(self.stats_layout)
 
         body = QHBoxLayout()
-        body.setDirection(QHBoxLayout.Direction.RightToLeft)
+        body.setDirection(QHBoxLayout.Direction.LeftToRight)
         body.setSpacing(16)
-
-        forms = QVBoxLayout()
-        forms.setSpacing(16)
-        forms.addWidget(self._category_form_card())
-        forms.addWidget(self._location_form_card())
-        body.addLayout(forms, stretch=1)
+        body.addLayout(self._action_buttons_column(), stretch=1)
         body.addWidget(self._tree_card(), stretch=2)
-        self.root_layout.addLayout(body, stretch=1)
+        page_content_layout.addLayout(body, stretch=1)
 
-    def _category_form_card(self):
-        card = self.card()
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(18, 16, 18, 16)
-        layout.setSpacing(12)
-        title = QLabel("دسته‌بندی‌ها")
-        title.setObjectName("sectionTitle")
-        form = QFormLayout()
-        self.category_order_input = QSpinBox()
-        self.category_order_input.setRange(1, 999)
-        self.category_title_input = QLineEdit()
-        self.category_title_input.setPlaceholderText("مثال: اورژانس")
-        form.addRow("شماره ترتیب *", self.category_order_input)
-        form.addRow("عنوان *", self.category_title_input)
+        self.root_layout.addWidget(self.page_content, stretch=1)
+        self._build_category_overlay()
+        self._build_location_overlay()
+        self._center_page_header()
 
-        buttons = QHBoxLayout()
-        add_button = self.action_button("ثبت دسته")
-        update_button = self.action_button("ویرایش", "secondary")
-        delete_button = self.action_button("حذف", "danger")
-        add_button.clicked.connect(self.add_category)
-        update_button.clicked.connect(self.update_category)
-        delete_button.clicked.connect(self.delete_category)
-        buttons.addWidget(add_button)
-        buttons.addWidget(update_button)
-        buttons.addWidget(delete_button)
+    def _center_page_header(self) -> None:
+        header = self.root_layout.itemAt(0).widget()
+        if header is None:
+            return
+        layout = header.layout()
+        if layout is None:
+            return
+        for index in range(layout.count()):
+            item = layout.itemAt(index)
+            widget = item.widget()
+            if widget is not None:
+                widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                layout.setAlignment(widget, Qt.AlignmentFlag.AlignHCenter)
 
-        layout.addWidget(title)
-        layout.addLayout(form)
-        layout.addLayout(buttons)
-        return card
+    def _action_buttons_column(self) -> QVBoxLayout:
+        column = QVBoxLayout()
+        column.setSpacing(14)
 
-    def _location_form_card(self):
-        card = self.card()
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(18, 16, 18, 16)
-        layout.setSpacing(12)
-        title = QLabel("نقاط")
-        title.setObjectName("sectionTitle")
-        form = QFormLayout()
-        self.location_category_combo = QComboBox()
-        self.location_title_input = QLineEdit()
-        self.location_title_input.setPlaceholderText("مثال: مرکز کلاچای")
-        form.addRow("دسته‌بندی *", self.location_category_combo)
-        form.addRow("عنوان نقطه *", self.location_title_input)
+        category_button = self._page_action_button("ثبت دسته بندی", "category")
+        location_button = self._page_action_button("ثبت نقاط", "location")
+        category_button.clicked.connect(self.open_category_overlay)
+        location_button.clicked.connect(self.open_location_overlay)
 
-        buttons = QHBoxLayout()
-        add_button = self.action_button("ثبت نقطه")
-        update_button = self.action_button("ویرایش", "secondary")
-        delete_button = self.action_button("حذف", "danger")
-        add_button.clicked.connect(self.add_location)
-        update_button.clicked.connect(self.update_location)
-        delete_button.clicked.connect(self.delete_location)
-        buttons.addWidget(add_button)
-        buttons.addWidget(update_button)
-        buttons.addWidget(delete_button)
+        column.addWidget(category_button)
+        column.addWidget(location_button)
+        column.addStretch(1)
+        return column
 
-        layout.addWidget(title)
-        layout.addLayout(form)
-        layout.addLayout(buttons)
-        return card
+    def _page_action_button(self, title: str, variant: str) -> QPushButton:
+        button = QPushButton(title)
+        button.setObjectName("locationPageButton")
+        button.setProperty("variant", variant)
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.setMinimumHeight(92)
+        return button
 
-    def _tree_card(self):
+    def _tree_card(self) -> QFrame:
         card = self.card()
         layout = QVBoxLayout(card)
         layout.setContentsMargins(18, 16, 18, 16)
         title = QLabel("ساختار درختی نقاط")
         title.setObjectName("sectionTitle")
+        title.setAlignment(Qt.AlignmentFlag.AlignRight)
         self.tree = QTreeWidget()
-        self.tree.setHeaderLabels(["شماره", "عنوان", "نوع"])
+        self.tree.setObjectName("locationsTree")
+        self.tree.setColumnCount(1)
+        self.tree.setHeaderHidden(True)
+        self.tree.setRootIsDecorated(False)
+        self.tree.setIndentation(22)
         self.tree.itemSelectionChanged.connect(self.on_tree_selection_changed)
+        self.tree.itemClicked.connect(self._on_tree_item_clicked)
+        self.tree.itemExpanded.connect(self._on_category_expanded)
+        self.tree.itemCollapsed.connect(self._on_category_collapsed)
         layout.addWidget(title)
         layout.addWidget(self.tree)
         return card
+
+    def _build_category_overlay(self) -> None:
+        self.category_overlay = QFrame(self)
+        self.category_overlay.setObjectName("formOverlay")
+        self.category_overlay.hide()
+
+        overlay_layout = QVBoxLayout(self.category_overlay)
+        overlay_layout.setContentsMargins(24, 24, 24, 24)
+        overlay_layout.addStretch(1)
+
+        card = QFrame()
+        card.setObjectName("formModalCard")
+        card.setFixedWidth(460)
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(24, 22, 24, 22)
+        card_layout.setSpacing(14)
+
+        title = QLabel("ثبت دسته بندی")
+        title.setObjectName("formModalTitle")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        form = QFormLayout()
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+        self.category_order_input = QSpinBox()
+        self.category_order_input.setRange(1, 999)
+        self.category_title_input = QLineEdit()
+        self.category_title_input.setPlaceholderText("مثال: اورژانس")
+        self.category_title_input.setAlignment(Qt.AlignmentFlag.AlignRight)
+        form.addRow("شماره ترتیب *", self.category_order_input)
+        form.addRow("عنوان *", self.category_title_input)
+
+        buttons = QHBoxLayout()
+        buttons.setSpacing(10)
+        add_button = self.action_button("ثبت")
+        update_button = self.action_button("ویرایش", "secondary")
+        delete_button = self.action_button("حذف", "danger")
+        back_button = self.action_button("بازگشت", "ghost")
+        add_button.clicked.connect(self.add_category)
+        update_button.clicked.connect(self.update_category)
+        delete_button.clicked.connect(self.delete_category)
+        back_button.clicked.connect(self.close_category_overlay)
+        buttons.addStretch(1)
+        buttons.addWidget(add_button)
+        buttons.addWidget(update_button)
+        buttons.addWidget(delete_button)
+        buttons.addWidget(back_button)
+        buttons.addStretch(1)
+
+        card_layout.addWidget(title)
+        card_layout.addLayout(form)
+        card_layout.addLayout(buttons)
+        overlay_layout.addWidget(card, alignment=Qt.AlignmentFlag.AlignCenter)
+        overlay_layout.addStretch(1)
+
+    def _build_location_overlay(self) -> None:
+        self.location_overlay = QFrame(self)
+        self.location_overlay.setObjectName("formOverlay")
+        self.location_overlay.hide()
+
+        overlay_layout = QVBoxLayout(self.location_overlay)
+        overlay_layout.setContentsMargins(24, 24, 24, 24)
+        overlay_layout.addStretch(1)
+
+        card = QFrame()
+        card.setObjectName("formModalCard")
+        card.setFixedWidth(460)
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(24, 22, 24, 22)
+        card_layout.setSpacing(14)
+
+        title = QLabel("ثبت نقاط")
+        title.setObjectName("formModalTitle")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        form = QFormLayout()
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+        self.location_category_combo = QComboBox()
+        self.location_category_combo.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        self.location_title_input = QLineEdit()
+        self.location_title_input.setPlaceholderText("مثال: مرکز کلاچای")
+        self.location_title_input.setAlignment(Qt.AlignmentFlag.AlignRight)
+        form.addRow("دسته‌بندی *", self.location_category_combo)
+        form.addRow("عنوان نقطه *", self.location_title_input)
+
+        buttons = QHBoxLayout()
+        buttons.setSpacing(10)
+        add_button = self.action_button("ثبت")
+        update_button = self.action_button("ویرایش", "secondary")
+        delete_button = self.action_button("حذف", "danger")
+        back_button = self.action_button("بازگشت", "ghost")
+        add_button.clicked.connect(self.add_location)
+        update_button.clicked.connect(self.update_location)
+        delete_button.clicked.connect(self.delete_location)
+        back_button.clicked.connect(self.close_location_overlay)
+        buttons.addStretch(1)
+        buttons.addWidget(add_button)
+        buttons.addWidget(update_button)
+        buttons.addWidget(delete_button)
+        buttons.addWidget(back_button)
+        buttons.addStretch(1)
+
+        card_layout.addWidget(title)
+        card_layout.addLayout(form)
+        card_layout.addLayout(buttons)
+        overlay_layout.addWidget(card, alignment=Qt.AlignmentFlag.AlignCenter)
+        overlay_layout.addStretch(1)
+
+    def open_category_overlay(self) -> None:
+        self._refresh_category_combo()
+        if self.selected_category_id is None:
+            self.clear_category_form()
+        else:
+            self._populate_category_form_from_selection()
+        self._show_overlay(self.category_overlay)
+
+    def open_location_overlay(self) -> None:
+        self._refresh_category_combo()
+        if self.selected_location_id is None:
+            self.clear_location_form()
+        else:
+            self._populate_location_form_from_selection()
+        self._show_overlay(self.location_overlay)
+
+    def close_category_overlay(self) -> None:
+        self._hide_overlay(self.category_overlay)
+
+    def close_location_overlay(self) -> None:
+        self._hide_overlay(self.location_overlay)
+
+    def _show_overlay(self, overlay: QFrame) -> None:
+        blur = QGraphicsBlurEffect(self.page_content)
+        blur.setBlurRadius(8)
+        self.page_content.setGraphicsEffect(blur)
+        overlay.setGeometry(self.rect())
+        overlay.raise_()
+        overlay.show()
+
+    def _hide_overlay(self, overlay: QFrame) -> None:
+        self.page_content.setGraphicsEffect(None)
+        overlay.hide()
 
     def refresh(self) -> None:
         self._refresh_stats()
@@ -135,8 +275,9 @@ class LocationsPage(Page):
         counts = self.db.category_location_counts()
         colors = ["#2563EB", "#7C3AED", "#F97316", "#22C55E"]
         for col, title in enumerate(PERMANENT_CATEGORY_TITLES):
+            label = CATEGORY_STAT_LABELS.get(title, title)
             self.stats_layout.addWidget(
-                make_stat_card(f"نقاط {title}", str(counts.get(title, 0)), colors[col]),
+                make_stat_card(label, str(counts.get(title, 0)), colors[col]),
                 0,
                 col,
             )
@@ -146,45 +287,64 @@ class LocationsPage(Page):
         self.location_category_combo.blockSignals(True)
         self.location_category_combo.clear()
         for category in self.db.list_categories():
-            label = f"{to_persian_digits(category['sort_order'])} - {category['title']}"
-            self.location_category_combo.addItem(label, category["id"])
+            combo_label = f"{to_persian_digits(category['sort_order'])} - {category['title']}"
+            self.location_category_combo.addItem(combo_label, category["id"])
         index = self.location_category_combo.findData(current)
         if index >= 0:
             self.location_category_combo.setCurrentIndex(index)
         self.location_category_combo.blockSignals(False)
 
     def _refresh_tree(self) -> None:
+        self.tree.blockSignals(True)
         self.tree.clear()
         categories = self.db.list_categories()
         locations = self.db.list_locations()
         for category in categories:
-            category_item = QTreeWidgetItem(
-                [to_persian_digits(category["sort_order"]), category["title"], "دسته‌بندی"]
-            )
+            category_locations = [
+                location for location in locations if location["category_id"] == category["id"]
+            ]
+            has_children = bool(category_locations)
+            prefix = "+" if has_children else ""
+            display_title = f"{prefix} {category['title']}".strip()
+            category_item = QTreeWidgetItem([display_title])
             category_item.setData(
                 0,
                 Qt.ItemDataRole.UserRole,
-                ("category", category["id"], category["is_locked"]),
+                ("category", category["id"], category["is_locked"], category["title"]),
             )
             self.tree.addTopLevelItem(category_item)
 
-            location_index = 1
-            for location in locations:
-                if location["category_id"] != category["id"]:
-                    continue
-                location_item = QTreeWidgetItem(
-                    [to_persian_digits(f"{category['sort_order']}.{location_index}"), location["title"], "نقطه"]
-                )
+            for location in category_locations:
+                location_item = QTreeWidgetItem([location["title"]])
                 location_item.setData(
                     0,
                     Qt.ItemDataRole.UserRole,
-                    ("location", location["id"], category["id"]),
+                    ("location", location["id"], category["id"], location["title"]),
                 )
                 category_item.addChild(location_item)
-                location_index += 1
-        self.tree.expandAll()
-        for column in range(3):
-            self.tree.resizeColumnToContents(column)
+
+            category_item.setExpanded(False)
+        self.tree.blockSignals(False)
+
+    def _on_tree_item_clicked(self, item: QTreeWidgetItem, _column: int) -> None:
+        data = item.data(0, Qt.ItemDataRole.UserRole)
+        if data and data[0] == "category" and item.childCount() > 0:
+            item.setExpanded(not item.isExpanded())
+
+    def _on_category_expanded(self, item: QTreeWidgetItem) -> None:
+        data = item.data(0, Qt.ItemDataRole.UserRole)
+        if not data or data[0] != "category":
+            return
+        title = data[3]
+        item.setText(0, f"− {title}")
+
+    def _on_category_collapsed(self, item: QTreeWidgetItem) -> None:
+        data = item.data(0, Qt.ItemDataRole.UserRole)
+        if not data or data[0] != "category":
+            return
+        title = data[3]
+        prefix = "+" if item.childCount() > 0 else ""
+        item.setText(0, f"{prefix} {title}".strip())
 
     def add_category(self) -> None:
         title = self.category_title_input.text().strip()
@@ -196,6 +356,7 @@ class LocationsPage(Page):
             self.db.add_category(title, sort_order)
             show_success(self, "دسته‌بندی ثبت شد.")
             self.clear_category_form()
+            self.close_category_overlay()
             self.refresh()
         except DatabaseError as exc:
             show_error(self, f"ثبت دسته‌بندی انجام نشد: {exc}")
@@ -218,6 +379,7 @@ class LocationsPage(Page):
             self.db.update_category(self.selected_category_id, title, sort_order)
             show_success(self, "دسته‌بندی ویرایش شد.")
             self.clear_category_form()
+            self.close_category_overlay()
             self.refresh()
         except DatabaseError as exc:
             show_error(self, f"ویرایش دسته‌بندی انجام نشد: {exc}")
@@ -237,6 +399,7 @@ class LocationsPage(Page):
             show_success(self, "دسته‌بندی حذف شد.")
             self.clear_category_form()
             self.clear_location_form()
+            self.close_category_overlay()
             self.refresh()
         except DatabaseError as exc:
             show_error(self, f"حذف دسته‌بندی انجام نشد: {exc}")
@@ -251,6 +414,7 @@ class LocationsPage(Page):
             self.db.add_location(int(category_id), title)
             show_success(self, "نقطه ثبت شد.")
             self.clear_location_form()
+            self.close_location_overlay()
             self.refresh()
         except DatabaseError as exc:
             show_error(self, f"ثبت نقطه انجام نشد: {exc}")
@@ -268,6 +432,7 @@ class LocationsPage(Page):
             self.db.update_location(self.selected_location_id, int(category_id), title)
             show_success(self, "نقطه ویرایش شد.")
             self.clear_location_form()
+            self.close_location_overlay()
             self.refresh()
         except DatabaseError as exc:
             show_error(self, f"ویرایش نقطه انجام نشد: {exc}")
@@ -282,6 +447,7 @@ class LocationsPage(Page):
             self.db.delete_location(self.selected_location_id)
             show_success(self, "نقطه حذف شد.")
             self.clear_location_form()
+            self.close_location_overlay()
             self.refresh()
         except DatabaseError as exc:
             show_error(self, f"حذف نقطه انجام نشد: {exc}")
@@ -296,20 +462,33 @@ class LocationsPage(Page):
             return
         if data[0] == "category":
             self.selected_location_id = None
-            self.location_title_input.clear()
             self.selected_category_id = int(data[1])
-            self.category_order_input.setValue(int(to_english_digits(item.text(0))))
-            self.category_title_input.setText(item.text(1))
         elif data[0] == "location":
             self.selected_category_id = None
-            self.category_title_input.clear()
-            self._set_next_category_order()
             self.selected_location_id = int(data[1])
-            category_id = int(data[2])
-            self.location_title_input.setText(item.text(1))
-            index = self.location_category_combo.findData(category_id)
-            if index >= 0:
-                self.location_category_combo.setCurrentIndex(index)
+
+    def _populate_category_form_from_selection(self) -> None:
+        if self.selected_category_id is None:
+            return
+        category = self.db.get_category(self.selected_category_id)
+        if not category:
+            return
+        self.category_order_input.setValue(int(category["sort_order"]))
+        self.category_title_input.setText(category["title"])
+
+    def _populate_location_form_from_selection(self) -> None:
+        if self.selected_location_id is None:
+            return
+        items = self.tree.selectedItems()
+        if not items:
+            return
+        data = items[0].data(0, Qt.ItemDataRole.UserRole)
+        if not data or data[0] != "location":
+            return
+        self.location_title_input.setText(data[3])
+        index = self.location_category_combo.findData(int(data[2]))
+        if index >= 0:
+            self.location_category_combo.setCurrentIndex(index)
 
     def clear_category_form(self) -> None:
         self.selected_category_id = None
@@ -324,3 +503,10 @@ class LocationsPage(Page):
         categories = self.db.list_categories()
         next_order = max([int(item["sort_order"]) for item in categories], default=0) + 1
         self.category_order_input.setValue(next_order)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        if hasattr(self, "category_overlay"):
+            self.category_overlay.setGeometry(self.rect())
+        if hasattr(self, "location_overlay"):
+            self.location_overlay.setGeometry(self.rect())
