@@ -49,6 +49,7 @@ class DatabaseManager:
                     car_model TEXT NOT NULL DEFAULT '',
                     car_year TEXT NOT NULL DEFAULT '',
                     car_color TEXT NOT NULL DEFAULT '',
+                    vehicle_status TEXT NOT NULL DEFAULT 'دولتی',
                     distance_rate REAL NOT NULL DEFAULT 0,
                     is_active INTEGER NOT NULL DEFAULT 1,
                     inactive_reason TEXT NOT NULL DEFAULT ''
@@ -220,6 +221,7 @@ class DatabaseManager:
             "car_model": "TEXT NOT NULL DEFAULT ''",
             "car_year": "TEXT NOT NULL DEFAULT ''",
             "car_color": "TEXT NOT NULL DEFAULT ''",
+            "vehicle_status": "TEXT NOT NULL DEFAULT 'دولتی'",
             "distance_rate": "REAL NOT NULL DEFAULT 0",
             "is_active": "INTEGER NOT NULL DEFAULT 1",
             "inactive_reason": "TEXT NOT NULL DEFAULT ''",
@@ -332,8 +334,8 @@ class DatabaseManager:
         return self.fetch_all(
             """
             SELECT id, full_name, first_name, last_name, mobile, national_id,
-                   birth_date, car_model, car_year, car_color, distance_rate,
-                   is_active, inactive_reason
+                   birth_date, car_model, car_year, car_color, vehicle_status,
+                   distance_rate, is_active, inactive_reason
             FROM drivers
             ORDER BY full_name
             """
@@ -345,10 +347,10 @@ class DatabaseManager:
             """
             INSERT INTO drivers (
                 full_name, first_name, last_name, mobile, national_id,
-                birth_date, car_model, car_year, car_color, distance_rate,
-                is_active, inactive_reason
+                birth_date, car_model, car_year, car_color, vehicle_status,
+                distance_rate, is_active, inactive_reason
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 driver["full_name"],
@@ -360,6 +362,7 @@ class DatabaseManager:
                 driver["car_model"],
                 driver["car_year"],
                 driver["car_color"],
+                driver["vehicle_status"],
                 float(driver["distance_rate"]),
                 int(driver["is_active"]),
                 driver["inactive_reason"],
@@ -373,7 +376,7 @@ class DatabaseManager:
             UPDATE drivers
             SET full_name = ?, first_name = ?, last_name = ?, mobile = ?,
                 national_id = ?, birth_date = ?, car_model = ?, car_year = ?,
-                car_color = ?, distance_rate = ?, is_active = ?,
+                car_color = ?, vehicle_status = ?, distance_rate = ?, is_active = ?,
                 inactive_reason = ?
             WHERE id = ?
             """,
@@ -387,6 +390,7 @@ class DatabaseManager:
                 driver["car_model"],
                 driver["car_year"],
                 driver["car_color"],
+                driver["vehicle_status"],
                 float(driver["distance_rate"]),
                 int(driver["is_active"]),
                 driver["inactive_reason"],
@@ -426,6 +430,7 @@ class DatabaseManager:
             "car_model": str(data.get("car_model", "")).strip(),
             "car_year": str(data.get("car_year", "")).strip(),
             "car_color": str(data.get("car_color", "")).strip(),
+            "vehicle_status": str(data.get("vehicle_status", "دولتی")).strip() or "دولتی",
             "distance_rate": float(data.get("distance_rate") or 0),
             "is_active": int(data.get("is_active", 1)),
             "inactive_reason": str(data.get("inactive_reason", "")).strip(),

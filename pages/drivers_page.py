@@ -7,6 +7,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
+    QComboBox,
     QFileDialog,
     QFrame,
     QGraphicsBlurEffect,
@@ -32,6 +33,8 @@ from ui.utils import Page, confirm, show_error, show_success, to_english_digits,
 
 PERSIAN_TEXT_RE = re.compile(r"^[\u0600-\u06FF\s‌]+$")
 DATE_RE = re.compile(r"^\d{4}/\d{2}/\d{2}$")
+VEHICLE_STATUS_GOVERNMENT = "دولتی"
+VEHICLE_STATUS_RENTAL = "استیجاری"
 
 
 class DriversPage(Page):
@@ -172,16 +175,27 @@ class DriversPage(Page):
         self.birth_date_input.setPlaceholderText("yyyy/mm/dd")
         self.birth_date_input.setMaxLength(10)
         self.birth_date_input.textEdited.connect(self._format_birth_date)
-
-        for label, widget in [
-            ("نام *", self.first_name_input),
-            ("نام خانوادگی *", self.last_name_input),
-            ("شماره موبایل راننده *", self.mobile_input),
-            ("شماره ملی راننده *", self.national_id_input),
-            ("تاریخ تولد *", self.birth_date_input),
+        for widget in [
+            self.first_name_input,
+            self.last_name_input,
+            self.mobile_input,
+            self.national_id_input,
+            self.birth_date_input,
         ]:
             self._prepare_input(widget)
-            personal_layout.addWidget(self._field_box(label, widget))
+
+        personal_layout.addWidget(
+            self._two_field_row("نام *", self.first_name_input, "نام خانوادگی *", self.last_name_input)
+        )
+        personal_layout.addWidget(
+            self._two_field_row(
+                "شماره موبایل راننده *",
+                self.mobile_input,
+                "شماره ملی راننده *",
+                self.national_id_input,
+            )
+        )
+        personal_layout.addWidget(self._field_box("تاریخ تولد *", self.birth_date_input))
 
         vehicle_group = QGroupBox("اطلاعات خودرو")
         vehicle_group.setObjectName("driverFormGroup")
@@ -197,21 +211,28 @@ class DriversPage(Page):
         self.car_year_input.setMaxLength(4)
         self.car_color_input = QLineEdit()
         self.car_color_input.setPlaceholderText("مثال: سفید")
+        self.vehicle_status_combo = QComboBox()
+        self.vehicle_status_combo.addItem(VEHICLE_STATUS_GOVERNMENT)
+        self.vehicle_status_combo.addItem(VEHICLE_STATUS_RENTAL)
+        self.vehicle_status_combo.currentTextChanged.connect(self._update_distance_rate_visibility)
         self.distance_rate_input = QLineEdit()
         self.distance_rate_input.setPlaceholderText("مثال: 230,000")
         self.distance_rate_input.textEdited.connect(self._format_distance_rate)
-
-        for label, widget in [
-            ("مدل ماشین *", self.car_model_input),
-            ("سال تولید ماشین *", self.car_year_input),
-            ("رنگ ماشین *", self.car_color_input),
-            ("نرخ محاسبه به ریال *", self.distance_rate_input),
-        ]:
+        for widget in [self.car_model_input, self.car_year_input, self.car_color_input, self.distance_rate_input]:
             self._prepare_input(widget)
-            vehicle_layout.addWidget(self._field_box(label, widget))
+        self._prepare_combo(self.vehicle_status_combo)
+
+        vehicle_layout.addWidget(
+            self._two_field_row("مدل خودرو *", self.car_model_input, "سال تولید *", self.car_year_input)
+        )
+        vehicle_layout.addWidget(
+            self._two_field_row("رنگ خودرو *", self.car_color_input, "وضعیت خودرو *", self.vehicle_status_combo)
+        )
+        self.distance_rate_box = self._field_box("نرخ محاسبه به ریال *", self.distance_rate_input)
+        vehicle_layout.addWidget(self.distance_rate_box)
+        self._update_distance_rate_visibility()
 
         buttons = QHBoxLayout()
-        buttons.setDirection(QHBoxLayout.Direction.RightToLeft)
         buttons.setSpacing(10)
         self.save_button = self.action_button("ثبت")
         back_button = self.action_button("بازگشت", "ghost")
@@ -220,6 +241,7 @@ class DriversPage(Page):
         buttons.addStretch(1)
         buttons.addWidget(self.save_button)
         buttons.addWidget(back_button)
+        buttons.addStretch(1)
 
         body_layout.addWidget(personal_group)
         body_layout.addWidget(vehicle_group)
@@ -236,6 +258,25 @@ class DriversPage(Page):
         layout.addWidget(scroll)
         return card
 
+    def _two_field_row(
+        self,
+        label_a: str,
+        widget_a: QWidget,
+        label_b: str,
+        widget_b: QWidget,
+        stretch_a: int = 1,
+        stretch_b: int = 1,
+    ) -> QWidget:
+        row = QWidget()
+        row.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        layout = QHBoxLayout(row)
+        layout.setDirection(QHBoxLayout.Direction.LeftToRight)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
+        layout.addWidget(self._field_box(label_b, widget_b), stretch=stretch_b)
+        layout.addWidget(self._field_box(label_a, widget_a), stretch=stretch_a)
+        return row
+
     def _field_box(self, label: str, widget: QWidget) -> QFrame:
         box = QFrame()
         box.setObjectName("fieldBox")
@@ -245,15 +286,27 @@ class DriversPage(Page):
         layout.setSpacing(6)
         label_widget = QLabel(label)
         label_widget.setObjectName("fieldLabel")
-        label_widget.setAlignment(Qt.AlignmentFlag.AlignRight)
-        layout.addWidget(label_widget)
+        label_widget.setAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
+        layout.addWidget(label_widget, alignment=Qt.AlignmentFlag.AlignRight)
         layout.addWidget(widget)
         return box
 
     def _prepare_input(self, widget: QLineEdit) -> None:
         widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        widget.setAlignment(Qt.AlignmentFlag.AlignRight)
+        widget.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         widget.setMinimumHeight(36)
+
+    def _prepare_combo(self, combo: QComboBox) -> None:
+        combo.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        combo.setMinimumHeight(36)
+
+    def _update_distance_rate_visibility(self) -> None:
+        is_rental = self.vehicle_status_combo.currentText() == VEHICLE_STATUS_RENTAL
+        self.distance_rate_box.setVisible(is_rental)
+        if not is_rental:
+            self.distance_rate_input.clear()
 
     def _build_list_view(self) -> QFrame:
         card = self.card()
@@ -406,6 +459,12 @@ class DriversPage(Page):
         self._updating_checks = False
 
     def collect_form_data(self) -> dict | None:
+        vehicle_status = self.vehicle_status_combo.currentText().strip()
+        distance_rate = (
+            self._plain_number(self.distance_rate_input.text())
+            if vehicle_status == VEHICLE_STATUS_RENTAL
+            else 0
+        )
         data = {
             "first_name": self.first_name_input.text().strip(),
             "last_name": self.last_name_input.text().strip(),
@@ -415,11 +474,23 @@ class DriversPage(Page):
             "car_model": self.car_model_input.text().strip(),
             "car_year": to_english_digits(self.car_year_input.text().strip()),
             "car_color": self.car_color_input.text().strip(),
-            "distance_rate": self._plain_number(self.distance_rate_input.text()),
+            "vehicle_status": vehicle_status,
+            "distance_rate": distance_rate,
         }
 
-        if any(not data[key] for key in data):
-            show_error(self, "همه فیلدهای فرم ثبت راننده را کامل کنید.")
+        required_fields = [
+            "first_name",
+            "last_name",
+            "mobile",
+            "national_id",
+            "birth_date",
+            "car_model",
+            "car_year",
+            "car_color",
+            "vehicle_status",
+        ]
+        if any(not data[key] for key in required_fields):
+            show_error(self, "همه فیلدهای فرم ثبت راننده الزامی است.")
             return None
         if not self._is_persian_text(data["first_name"]):
             show_error(self, "نام فقط باید شامل حروف فارسی باشد.")
@@ -439,8 +510,8 @@ class DriversPage(Page):
         if not re.fullmatch(r"\d{4}", data["car_year"]):
             show_error(self, "سال تولید ماشین باید دقیقاً 4 رقم باشد.")
             return None
-        if data["distance_rate"] <= 0:
-            show_error(self, "نرخ محاسبه به ریال را وارد کنید.")
+        if vehicle_status == VEHICLE_STATUS_RENTAL and data["distance_rate"] <= 0:
+            show_error(self, "برای خودرو استیجاری، نرخ محاسبه به ریال الزامی است.")
             return None
 
         if self.editing_driver_id is not None:
@@ -488,7 +559,13 @@ class DriversPage(Page):
         self.car_model_input.setText(driver["car_model"])
         self.car_year_input.setText(to_persian_digits(driver["car_year"]))
         self.car_color_input.setText(driver["car_color"])
-        self.distance_rate_input.setText(self._format_number(driver["distance_rate"]))
+        status = driver.get("vehicle_status") or VEHICLE_STATUS_GOVERNMENT
+        status_index = self.vehicle_status_combo.findText(status)
+        if status_index >= 0:
+            self.vehicle_status_combo.setCurrentIndex(status_index)
+        self._update_distance_rate_visibility()
+        if status == VEHICLE_STATUS_RENTAL:
+            self.distance_rate_input.setText(self._format_number(driver["distance_rate"]))
         self.stack.setCurrentIndex(self.FORM_VIEW)
 
     def delete_selected_drivers(self) -> None:
@@ -694,6 +771,7 @@ class DriversPage(Page):
                     f"مدل ماشین: {driver['car_model']}",
                     f"سال تولید ماشین: {to_persian_digits(driver['car_year'])}",
                     f"رنگ ماشین: {driver['car_color']}",
+                    f"وضعیت خودرو: {driver.get('vehicle_status') or VEHICLE_STATUS_GOVERNMENT}",
                     f"نرخ محاسبه: {self._format_rial(driver['distance_rate'])}",
                     f"وضعیت: {status}",
                     f"علت غیرفعال‌سازی: {inactive_reason}",
@@ -760,6 +838,8 @@ class DriversPage(Page):
             self.distance_rate_input,
         ]:
             line_edit.clear()
+        self.vehicle_status_combo.setCurrentIndex(0)
+        self._update_distance_rate_visibility()
 
     def _format_birth_date(self, text: str) -> None:
         if self._formatting_birth_date:
