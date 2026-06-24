@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -19,6 +22,7 @@ from PySide6.QtWidgets import (
 )
 
 from database.db import DatabaseError, DatabaseManager
+from ui.locations_tree_delegate import LocationsTreeDelegate
 from ui.utils import Page, confirm, make_stat_card, show_error, show_success, to_english_digits, to_persian_digits
 
 
@@ -39,6 +43,7 @@ class LocationsPage(Page):
         self.db = db
         self.selected_category_id: int | None = None
         self.selected_location_id: int | None = None
+        self._tree_icons = self._load_tree_icons()
 
         self.page_content = QWidget()
         page_content_layout = QVBoxLayout(self.page_content)
@@ -97,25 +102,60 @@ class LocationsPage(Page):
         button.setMinimumHeight(92)
         return button
 
+    def _load_tree_icons(self) -> dict[str, QIcon]:
+        icons_dir = Path(__file__).resolve().parent.parent / "assets" / "icons"
+        return {
+            "chevron_down": QIcon(str(icons_dir / "chevron-down.svg")),
+            "chevron_left": QIcon(str(icons_dir / "chevron-left.svg")),
+            "folder": QIcon(str(icons_dir / "tree-folder.svg")),
+            "pin": QIcon(str(icons_dir / "tree-pin.svg")),
+        }
+
     def _tree_card(self) -> QFrame:
         card = self.card()
+        card.setObjectName("locationsTreeCard")
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(18, 16, 18, 16)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        header = QFrame()
+        header.setObjectName("locationsTreeHeader")
+        header_layout = QVBoxLayout(header)
+        header_layout.setContentsMargins(18, 16, 18, 14)
+        header_layout.setSpacing(4)
         title = QLabel("ساختار درختی نقاط")
-        title.setObjectName("sectionTitle")
+        title.setObjectName("locationsTreeTitle")
         title.setAlignment(Qt.AlignmentFlag.AlignRight)
+        subtitle = QLabel("دسته‌بندی‌ها و نقاط ثبت‌شده را مشاهده و مدیریت کنید")
+        subtitle.setObjectName("locationsTreeSubtitle")
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignRight)
+        header_layout.addWidget(title)
+        header_layout.addWidget(subtitle)
+
+        tree_wrap = QFrame()
+        tree_wrap.setObjectName("locationsTreeWrap")
+        tree_layout = QVBoxLayout(tree_wrap)
+        tree_layout.setContentsMargins(14, 14, 14, 14)
+        tree_layout.setSpacing(0)
+
         self.tree = QTreeWidget()
         self.tree.setObjectName("locationsTree")
         self.tree.setColumnCount(1)
         self.tree.setHeaderHidden(True)
         self.tree.setRootIsDecorated(False)
-        self.tree.setIndentation(22)
+        self.tree.setIndentation(28)
+        self.tree.setUniformItemSizes(False)
+        self.tree.setAnimated(True)
+        self.tree.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.tree.setItemDelegate(LocationsTreeDelegate(self.tree, self._tree_icons, self.tree))
         self.tree.itemSelectionChanged.connect(self.on_tree_selection_changed)
         self.tree.itemClicked.connect(self._on_tree_item_clicked)
-        self.tree.itemExpanded.connect(self._on_category_expanded)
-        self.tree.itemCollapsed.connect(self._on_category_collapsed)
-        layout.addWidget(title)
-        layout.addWidget(self.tree)
+        self.tree.itemExpanded.connect(self._on_category_toggle)
+        self.tree.itemCollapsed.connect(self._on_category_toggle)
+        tree_layout.addWidget(self.tree)
+
+        layout.addWidget(header)
+        layout.addWidget(tree_wrap, stretch=1)
         return card
 
     def _build_category_overlay(self) -> None:
@@ -303,10 +343,7 @@ class LocationsPage(Page):
             category_locations = [
                 location for location in locations if location["category_id"] == category["id"]
             ]
-            has_children = bool(category_locations)
-            prefix = "+" if has_children else ""
-            display_title = f"{prefix} {category['title']}".strip()
-            category_item = QTreeWidgetItem([display_title])
+            category_item = QTreeWidgetItem([""])
             category_item.setData(
                 0,
                 Qt.ItemDataRole.UserRole,
@@ -315,7 +352,7 @@ class LocationsPage(Page):
             self.tree.addTopLevelItem(category_item)
 
             for location in category_locations:
-                location_item = QTreeWidgetItem([location["title"]])
+                location_item = QTreeWidgetItem([""])
                 location_item.setData(
                     0,
                     Qt.ItemDataRole.UserRole,
@@ -331,20 +368,8 @@ class LocationsPage(Page):
         if data and data[0] == "category" and item.childCount() > 0:
             item.setExpanded(not item.isExpanded())
 
-    def _on_category_expanded(self, item: QTreeWidgetItem) -> None:
-        data = item.data(0, Qt.ItemDataRole.UserRole)
-        if not data or data[0] != "category":
-            return
-        title = data[3]
-        item.setText(0, f"− {title}")
-
-    def _on_category_collapsed(self, item: QTreeWidgetItem) -> None:
-        data = item.data(0, Qt.ItemDataRole.UserRole)
-        if not data or data[0] != "category":
-            return
-        title = data[3]
-        prefix = "+" if item.childCount() > 0 else ""
-        item.setText(0, f"{prefix} {title}".strip())
+    def _on_category_toggle(self, _item: QTreeWidgetItem) -> None:
+        self.tree.viewport().update()
 
     def add_category(self) -> None:
         title = self.category_title_input.text().strip()

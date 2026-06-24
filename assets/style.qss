@@ -711,27 +711,59 @@ QPushButton#locationPageButton[variant="location"]:hover {
     border: 1px solid #22C55E;
 }
 
-QTreeWidget#locationsTree {
+QFrame#locationsTreeCard {
     background: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    border-radius: 12px;
-    padding: 8px;
+    border: 1px solid #BFDBFE;
+    border-radius: 18px;
+}
+
+QFrame#locationsTreeHeader {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1E3A8A, stop:1 #2563EB);
+    border-top-left-radius: 17px;
+    border-top-right-radius: 17px;
+}
+
+QLabel#locationsTreeTitle {
+    color: #FFFFFF;
+    font-size: 17px;
+    font-weight: 800;
+    background: transparent;
+}
+
+QLabel#locationsTreeSubtitle {
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 12px;
+    font-weight: 600;
+    background: transparent;
+}
+
+QFrame#locationsTreeWrap {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #F8FAFC, stop:1 #FFFFFF);
+    border-bottom-left-radius: 17px;
+    border-bottom-right-radius: 17px;
+}
+
+QTreeWidget#locationsTree {
+    background: transparent;
+    border: none;
+    padding: 4px 2px;
     outline: none;
 }
 
 QTreeWidget#locationsTree::item {
-    min-height: 30px;
-    padding: 4px 8px;
-    border-radius: 8px;
+    border: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
 }
 
 QTreeWidget#locationsTree::item:selected {
-    background: #DBEAFE;
+    background: transparent;
     color: #1E3A8A;
 }
 
 QTreeWidget#locationsTree::item:hover {
-    background: #EFF6FF;
+    background: transparent;
 }
 
 QFrame#formOverlay {
