@@ -293,25 +293,48 @@ QPushButton#dashboardActionButton {
     padding: 8px 22px;
 }
 
+QPushButton#dashboardReserveButton {
+    min-height: 42px;
+    font-size: 14px;
+    padding: 8px 22px;
+    background: #FFF7ED;
+    color: #C2410C;
+    border: 1px solid #FDBA74;
+}
+
+QPushButton#dashboardReserveButton:hover {
+    background: #FFEDD5;
+    border: 1px solid #F97316;
+}
+
+QWidget#dashboardPage QLabel#pageTitle,
+QWidget#dashboardPage QLabel#pageSubtitle {
+    qproperty-alignment: AlignCenter;
+}
+
 QFrame#dashboardTableCard {
     background: #FFFFFF;
     border: 1px solid #BFDBFE;
     border-radius: 18px;
 }
 
+QFrame#dashboardMissionsHeader,
+QFrame#dashboardReservationsHeader,
 QFrame#dashboardTableHeader {
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1E3A8A, stop:1 #2563EB);
     border-top-left-radius: 17px;
     border-top-right-radius: 17px;
 }
 
-QLabel#dashboardTableTitle {
+QFrame[dashboardHeader="true"] QLabel#dashboardTableTitle {
     color: #FFFFFF;
     font-size: 16px;
     font-weight: 700;
+    background: transparent;
 }
 
-QTableWidget#dashboardTable {
+QTableWidget#dashboardTable,
+QTableWidget#dashboardReservationsTable {
     border: none;
     background: #FFFFFF;
 }

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QFrame,
     QGraphicsBlurEffect,
@@ -8,6 +9,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QMessageBox,
     QPushButton,
     QScrollArea,
     QTableWidget,
@@ -20,21 +22,32 @@ from database.db import DatabaseManager
 from ui.mission_form_widget import MissionFormWidget
 from ui.utils import PRIMARY_COLOR, SUCCESS_COLOR, Page, gregorian_to_jalali, make_stat_card, to_persian_digits
 
+MISSION_COLUMNS = ["ردیف", "تاریخ", "راننده", "سرنشینان", "مبدا", "مقصد", "مسافت (km)"]
+PASSENGERS_COLUMN = 3
+
 
 class DashboardPage(Page):
     def __init__(self, db: DatabaseManager) -> None:
         super().__init__("داشبورد", "نمای کلی وضعیت سیستم")
         self.db = db
         self.setObjectName("dashboardPage")
+        self._center_page_header()
 
         action_row = QHBoxLayout()
         action_row.setContentsMargins(0, 0, 0, 0)
+        action_row.setSpacing(12)
         action_row.addStretch(1)
         self.register_button = self.action_button("ثبت ماموریت", "primary")
         self.register_button.setObjectName("dashboardActionButton")
         self.register_button.setMinimumWidth(160)
         self.register_button.clicked.connect(self.open_mission_overlay)
+        self.reserve_button = self.action_button("رزرو ماموریت", "secondary")
+        self.reserve_button.setObjectName("dashboardReserveButton")
+        self.reserve_button.setMinimumWidth(160)
+        self.reserve_button.clicked.connect(self._on_reserve_clicked)
         action_row.addWidget(self.register_button)
+        action_row.addWidget(self.reserve_button)
+        action_row.addStretch(1)
         self.root_layout.addLayout(action_row)
 
         self.content_area = QWidget()
@@ -46,11 +59,47 @@ class DashboardPage(Page):
         self.stats_layout = QGridLayout()
         self.stats_layout.setSpacing(14)
         content_layout.addLayout(self.stats_layout)
-        content_layout.addWidget(self._recent_missions_card(), stretch=1)
+
+        self.missions_table = self._create_table("dashboardTable")
+        content_layout.addWidget(
+            self._build_table_card("ماموریت‌های اخیر", "dashboardMissionsHeader", self.missions_table),
+            stretch=2,
+        )
+        self.reservations_table = self._create_table("dashboardReservationsTable")
+        content_layout.addWidget(
+            self._build_table_card("لیست رزرو ماموریت", "dashboardReservationsHeader", self.reservations_table),
+            stretch=1,
+        )
         self.root_layout.addWidget(self.content_area, stretch=1)
         self._build_mission_overlay()
 
-    def _recent_missions_card(self) -> QFrame:
+    def _center_page_header(self) -> None:
+        header = self.root_layout.itemAt(0).widget()
+        if header is None:
+            return
+        layout = header.layout()
+        if layout is None:
+            return
+        for index in range(layout.count()):
+            item = layout.itemAt(index)
+            widget = item.widget()
+            if widget is not None:
+                layout.setAlignment(widget, Qt.AlignmentFlag.AlignHCenter)
+
+    def _create_table(self, object_name: str) -> QTableWidget:
+        table = QTableWidget(0, len(MISSION_COLUMNS))
+        table.setObjectName(object_name)
+        table.setHorizontalHeaderLabels(MISSION_COLUMNS)
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        table.horizontalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
+        table.verticalHeader().setVisible(False)
+        table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        table.setAlternatingRowColors(True)
+        return table
+
+    def _build_table_card(self, title_text: str, header_object_name: str, table: QTableWidget) -> QFrame:
         card = self.card()
         card.setObjectName("dashboardTableCard")
         layout = QVBoxLayout(card)
@@ -58,28 +107,21 @@ class DashboardPage(Page):
         layout.setSpacing(0)
 
         header = QFrame()
-        header.setObjectName("dashboardTableHeader")
+        header.setObjectName(header_object_name)
+        header.setProperty("dashboardHeader", True)
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(18, 14, 18, 14)
-        title = QLabel("ماموریت‌های اخیر")
+        title = QLabel(title_text)
         title.setObjectName("dashboardTableTitle")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header_layout.addStretch(1)
         header_layout.addWidget(title)
         header_layout.addStretch(1)
 
         body = QFrame()
         body_layout = QVBoxLayout(body)
         body_layout.setContentsMargins(18, 12, 18, 16)
-        self.table = QTableWidget(0, 7)
-        self.table.setObjectName("dashboardTable")
-        self.table.setHorizontalHeaderLabels(
-            ["ردیف", "تاریخ", "راننده", "خودرو", "مسیر", "مسافت (km)", "ساعت"]
-        )
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.table.verticalHeader().setVisible(False)
-        self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.table.setAlternatingRowColors(True)
-        body_layout.addWidget(self.table)
+        body_layout.addWidget(table)
 
         layout.addWidget(header)
         layout.addWidget(body)
@@ -114,6 +156,13 @@ class DashboardPage(Page):
         overlay_layout.addWidget(mission_card, alignment=Qt.AlignmentFlag.AlignCenter)
         overlay_layout.addStretch(1)
 
+    def _on_reserve_clicked(self) -> None:
+        QMessageBox.information(
+            self,
+            "به زودی",
+            "قابلیت رزرو ماموریت در نسخه‌های بعدی اضافه خواهد شد.",
+        )
+
     def open_mission_overlay(self) -> None:
         self.mission_form.prepare_new()
         blur = QGraphicsBlurEffect(self.content_area)
@@ -139,6 +188,7 @@ class DashboardPage(Page):
     def refresh(self) -> None:
         self._refresh_stats()
         self._refresh_recent()
+        self._refresh_reservations()
 
     def _refresh_stats(self) -> None:
         while self.stats_layout.count():
@@ -157,20 +207,35 @@ class DashboardPage(Page):
         for column, (title, value, color, tint) in enumerate(cards):
             self.stats_layout.addWidget(make_stat_card(title, value, color, tint), 0, column)
 
-    def _refresh_recent(self) -> None:
-        missions = self.db.list_missions(limit=10)
-        self.table.setRowCount(len(missions))
+    @staticmethod
+    def _last_destination(destination: str) -> str:
+        parts = [part.strip() for part in destination.split("،") if part.strip()]
+        return parts[-1] if parts else destination
+
+    def _populate_mission_table(self, table: QTableWidget, missions: list[dict]) -> None:
+        passengers_font = QFont()
+        passengers_font.setPointSize(9)
+        table.setRowCount(len(missions))
         for row, mission in enumerate(missions):
             values = [
                 to_persian_digits(row + 1),
                 to_persian_digits(mission["mission_date"]),
                 mission["driver_name"],
-                mission["vehicle"],
-                f"{mission['origin']} ← {mission['destination']}",
+                mission.get("passengers") or "-",
+                mission["origin"],
+                self._last_destination(mission["destination"]),
                 to_persian_digits(f"{float(mission['distance']):.1f}"),
-                to_persian_digits(mission["mission_time"]),
             ]
             for col, value in enumerate(values):
                 item = QTableWidgetItem(value)
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                self.table.setItem(row, col, item)
+                if col == PASSENGERS_COLUMN:
+                    item.setFont(passengers_font)
+                table.setItem(row, col, item)
+
+    def _refresh_recent(self) -> None:
+        missions = self.db.list_missions(limit=10)
+        self._populate_mission_table(self.missions_table, missions)
+
+    def _refresh_reservations(self) -> None:
+        self.reservations_table.setRowCount(0)
