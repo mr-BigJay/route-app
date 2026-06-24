@@ -435,6 +435,11 @@ QStatusBar#statusBar {
     border-top: 1px solid #E2E8F0;
 }
 
+QLabel#statusCredits {
+    color: #64748B;
+    font-size: 11px;
+}
+
 QWidget#dashboardPage {
     background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #F8FAFC, stop:0.5 #EFF6FF, stop:1 #F8FAFC);
 }

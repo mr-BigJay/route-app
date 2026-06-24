@@ -129,16 +129,6 @@ class MainWindow(QMainWindow):
         date_layout.addWidget(self.time_label, alignment=Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(date_card)
 
-        footer = QLabel(
-            "طراحی و توسعه\n"
-            "صادق جعفری با همکاری علیرضا محمدرضایی\n"
-            "کارشناس IT - شبکه بهداشت رودسر"
-        )
-        footer.setObjectName("sidebarFooter")
-        footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        footer.setWordWrap(True)
-        layout.addWidget(footer)
-
         timer = QTimer(self)
         timer.timeout.connect(self._tick)
         timer.start(1000)
@@ -147,10 +137,23 @@ class MainWindow(QMainWindow):
     def _build_status_bar(self) -> None:
         status = QStatusBar()
         status.setObjectName("statusBar")
+        status.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         db_state = "متصل" if Path(DB_PATH).exists() else "در حال ایجاد"
-        status.addPermanentWidget(QLabel(f"نسخه {to_persian_digits(APP_VERSION)}"))
-        status.addPermanentWidget(QLabel("کاربر: مدیر سیستم"))
         status.addWidget(QLabel(f"وضعیت پایگاه داده محلی: {db_state}"))
+
+        credits_container = QWidget()
+        credits_layout = QHBoxLayout(credits_container)
+        credits_layout.setContentsMargins(0, 0, 0, 0)
+        credits_layout.addStretch(1)
+        credits = QLabel("طراحی و توسعه توسط صادق جعفری ، با همکاری علیرضا محمدرضایی")
+        credits.setObjectName("statusCredits")
+        credits.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        credits_layout.addWidget(credits)
+        credits_layout.addStretch(1)
+        status.addWidget(credits_container, 1)
+
+        status.addPermanentWidget(QLabel("کاربر: مدیر سیستم"))
+        status.addPermanentWidget(QLabel(f"نسخه {to_persian_digits(APP_VERSION)}"))
         self.setStatusBar(status)
 
     def _select_page(self, index: int) -> None:
