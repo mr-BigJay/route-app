@@ -147,24 +147,21 @@ QFrame#driverFormCard QLabel#fieldLabel {
 
 QFrame#driverFormCard QLineEdit#driverFormInput {
     qproperty-alignment: 'AlignRight | AlignVCenter';
-    min-height: 40px;
-    font-size: 10px;
-    padding: 8px 12px;
+    min-height: 36px;
+    padding: 4px 10px;
 }
 
 QFrame#driverFormCard QComboBox#driverFormInput {
-    min-height: 40px;
-    font-size: 10px;
-    padding: 0px 12px 0px 36px;
+    min-height: 36px;
+    padding: 0px 10px 0px 32px;
 }
 
 QFrame#driverFormCard QComboBox#driverFormInput QLineEdit {
     qproperty-alignment: 'AlignRight | AlignVCenter';
     background: transparent;
     border: none;
-    min-height: 36px;
-    font-size: 10px;
-    padding: 6px 0px;
+    min-height: 32px;
+    padding: 2px 0px;
 }
 
 QWidget#driversPage QLabel#pageTitle,
@@ -699,32 +696,25 @@ QWidget#missionFormWidget QLabel#fieldLabel {
 QWidget#missionFormWidget QLineEdit#missionFormInput,
 QWidget#missionFormWidget QDoubleSpinBox#missionFormInput {
     qproperty-alignment: 'AlignRight | AlignVCenter';
-    min-height: 40px;
-    font-size: 10px;
+    min-height: 36px;
 }
 
 QWidget#missionFormWidget QLineEdit#missionFormInput,
 QWidget#missionFormWidget QPlainTextEdit#missionFormInput {
-    padding: 8px 12px;
-}
-
-QWidget#missionFormWidget QPlainTextEdit#missionFormInput {
-    font-size: 10px;
+    padding: 4px 10px;
 }
 
 QWidget#missionFormWidget QComboBox#missionFormInput {
-    min-height: 40px;
-    font-size: 10px;
-    padding: 0px 12px 0px 36px;
+    min-height: 36px;
+    padding: 0px 10px 0px 32px;
 }
 
 QWidget#missionFormWidget QComboBox#missionFormInput QLineEdit {
     qproperty-alignment: 'AlignRight | AlignVCenter';
     background: transparent;
     border: none;
-    min-height: 36px;
-    font-size: 10px;
-    padding: 6px 0px;
+    min-height: 32px;
+    padding: 2px 0px;
 }
 
 QFrame#missionModalCard QGroupBox {

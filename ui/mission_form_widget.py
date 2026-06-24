@@ -159,8 +159,8 @@ class MissionFormWidget(QWidget):
         group.setObjectName("missionFormGroup")
         group.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         layout = QVBoxLayout(group)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(8)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(6)
         layout.addWidget(self._right_label_row(title, "missionSectionTitle"))
         return group
 
@@ -210,8 +210,8 @@ class MissionFormWidget(QWidget):
         box.setObjectName("missionFieldBox")
         box.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         layout = QVBoxLayout(box)
-        layout.setContentsMargins(10, 8, 10, 10)
-        layout.setSpacing(6)
+        layout.setContentsMargins(8, 6, 8, 8)
+        layout.setSpacing(4)
         layout.addWidget(self._right_label_row(label, "fieldLabel"))
         widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         layout.addWidget(widget)

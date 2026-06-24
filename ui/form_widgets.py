@@ -5,8 +5,8 @@ from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QComboBox, QDoubleSpinBox, QLineEdit, QSpinBox, QWidget
 
 
-FORM_FIELD_FONT_SIZE = 10
-FORM_FIELD_MIN_HEIGHT = 40
+FORM_FIELD_FONT_SIZE = 11
+FORM_FIELD_MIN_HEIGHT = 36
 
 
 class NoWheelComboBox(QComboBox):
@@ -42,6 +42,6 @@ def configure_combo_field(combo: QComboBox) -> None:
     if line_edit is None:
         return
     apply_form_field_font(line_edit)
-    line_edit.setMinimumHeight(FORM_FIELD_MIN_HEIGHT - 4)
+    line_edit.setMinimumHeight(FORM_FIELD_MIN_HEIGHT - 2)
     line_edit.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
     line_edit.setFrame(False)
