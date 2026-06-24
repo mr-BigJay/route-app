@@ -132,7 +132,6 @@ class DriversPage(Page):
     def _build_form_view(self) -> QFrame:
         card = self.card()
         card.setObjectName("driverFormCard")
-        card.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         layout = QVBoxLayout(card)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -157,6 +156,7 @@ class DriversPage(Page):
         personal_group = QGroupBox("اطلاعات فردی")
         personal_group.setObjectName("driverFormGroup")
         personal_group.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        personal_group.setAlignment(Qt.AlignmentFlag.AlignRight)
         personal_layout = QVBoxLayout(personal_group)
         personal_layout.setContentsMargins(12, 14, 12, 12)
         personal_layout.setSpacing(10)
@@ -200,6 +200,7 @@ class DriversPage(Page):
         vehicle_group = QGroupBox("اطلاعات خودرو")
         vehicle_group.setObjectName("driverFormGroup")
         vehicle_group.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        vehicle_group.setAlignment(Qt.AlignmentFlag.AlignRight)
         vehicle_layout = QVBoxLayout(vehicle_group)
         vehicle_layout.setContentsMargins(12, 14, 12, 12)
         vehicle_layout.setSpacing(10)
@@ -249,22 +250,14 @@ class DriversPage(Page):
 
         scroll = QScrollArea()
         scroll.setObjectName("driverFormScroll")
-        scroll.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll.setWidget(form_body)
-        scroll.viewport().setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        self._apply_rtl_tree(form_body)
 
         layout.addWidget(title_bar)
         layout.addWidget(scroll)
         return card
-
-    def _apply_rtl_tree(self, root: QWidget) -> None:
-        root.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        for child in root.findChildren(QWidget):
-            child.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
 
     def _two_field_row(
         self,
@@ -276,13 +269,13 @@ class DriversPage(Page):
         stretch_b: int = 1,
     ) -> QWidget:
         row = QWidget()
-        row.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        row.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         layout = QHBoxLayout(row)
-        layout.setDirection(QHBoxLayout.Direction.RightToLeft)
+        layout.setDirection(QHBoxLayout.Direction.LeftToRight)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
-        layout.addWidget(self._field_box(label_a, widget_a), stretch=stretch_a)
         layout.addWidget(self._field_box(label_b, widget_b), stretch=stretch_b)
+        layout.addWidget(self._field_box(label_a, widget_a), stretch=stretch_a)
         return row
 
     def _field_box(self, label: str, widget: QWidget) -> QFrame:
@@ -294,9 +287,7 @@ class DriversPage(Page):
         layout.setSpacing(6)
         label_widget = QLabel(label)
         label_widget.setObjectName("fieldLabel")
-        label_widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         label_widget.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        label_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         layout.addWidget(label_widget)
         layout.addWidget(widget)
         return box
@@ -305,12 +296,10 @@ class DriversPage(Page):
         widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         widget.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         widget.setMinimumHeight(36)
-        widget.setAttribute(Qt.WidgetAttribute.WA_RightToLeft, True)
 
     def _prepare_combo(self, combo: QComboBox) -> None:
         combo.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         combo.setMinimumHeight(36)
-        combo.setAttribute(Qt.WidgetAttribute.WA_RightToLeft, True)
         combo.view().setLayoutDirection(Qt.LayoutDirection.RightToLeft)
 
     def _update_distance_rate_visibility(self) -> None:
