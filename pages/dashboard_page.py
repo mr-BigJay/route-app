@@ -1,19 +1,22 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QFrame,
+    QGraphicsBlurEffect,
     QGridLayout,
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QPushButton,
+    QScrollArea,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
 )
 
-from database.db import DB_PATH, DatabaseManager
+from database.db import DatabaseManager
+from ui.mission_form_widget import MissionFormWidget
 from ui.utils import PRIMARY_COLOR, SUCCESS_COLOR, Page, gregorian_to_jalali, make_stat_card, to_persian_digits
 
 
@@ -21,23 +24,52 @@ class DashboardPage(Page):
     def __init__(self, db: DatabaseManager) -> None:
         super().__init__("داشبورد", "نمای کلی وضعیت سیستم")
         self.db = db
+        self.setObjectName("dashboardPage")
+
+        action_row = QHBoxLayout()
+        action_row.setContentsMargins(0, 0, 0, 0)
+        action_row.addStretch(1)
+        self.register_button = self.action_button("ثبت ماموریت", "primary")
+        self.register_button.setObjectName("dashboardActionButton")
+        self.register_button.setMinimumWidth(160)
+        self.register_button.clicked.connect(self.open_mission_overlay)
+        action_row.addWidget(self.register_button)
+        self.root_layout.addLayout(action_row)
+
+        self.content_area = QWidget()
+        self.content_area.setObjectName("dashboardContent")
+        content_layout = QVBoxLayout(self.content_area)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(16)
+
         self.stats_layout = QGridLayout()
         self.stats_layout.setSpacing(14)
-        self.root_layout.addLayout(self.stats_layout)
+        content_layout.addLayout(self.stats_layout)
+        content_layout.addWidget(self._recent_missions_card(), stretch=1)
+        self.root_layout.addWidget(self.content_area, stretch=1)
+        self._build_mission_overlay()
 
-        body = QHBoxLayout()
-        body.setSpacing(16)
-        body.addWidget(self._recent_missions_card(), stretch=2)
-        body.addWidget(self._database_status_card(), stretch=1)
-        self.root_layout.addLayout(body, stretch=1)
-
-    def _recent_missions_card(self):
+    def _recent_missions_card(self) -> QFrame:
         card = self.card()
+        card.setObjectName("dashboardTableCard")
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(18, 16, 18, 16)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        header = QFrame()
+        header.setObjectName("dashboardTableHeader")
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(18, 14, 18, 14)
         title = QLabel("ماموریت‌های اخیر")
-        title.setObjectName("sectionTitle")
+        title.setObjectName("dashboardTableTitle")
+        header_layout.addWidget(title)
+        header_layout.addStretch(1)
+
+        body = QFrame()
+        body_layout = QVBoxLayout(body)
+        body_layout.setContentsMargins(18, 12, 18, 16)
         self.table = QTableWidget(0, 7)
+        self.table.setObjectName("dashboardTable")
         self.table.setHorizontalHeaderLabels(
             ["ردیف", "تاریخ", "راننده", "خودرو", "مسیر", "مسافت (km)", "ساعت"]
         )
@@ -45,34 +77,67 @@ class DashboardPage(Page):
         self.table.verticalHeader().setVisible(False)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        layout.addWidget(title)
-        layout.addWidget(self.table)
+        self.table.setAlternatingRowColors(True)
+        body_layout.addWidget(self.table)
+
+        layout.addWidget(header)
+        layout.addWidget(body)
         return card
 
-    def _database_status_card(self):
-        card = self.card()
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(18, 16, 18, 16)
-        layout.setSpacing(12)
-        title = QLabel("وضعیت سیستم")
-        title.setObjectName("sectionTitle")
-        self.db_path_label = QLabel()
-        self.db_status_label = QLabel()
-        self.today_label = QLabel()
-        layout.addWidget(title)
-        layout.addWidget(self.db_status_label)
-        layout.addWidget(self.today_label)
-        layout.addWidget(self.db_path_label)
-        layout.addStretch(1)
-        return card
+    def _build_mission_overlay(self) -> None:
+        self.mission_overlay = QFrame(self)
+        self.mission_overlay.setObjectName("missionOverlay")
+        self.mission_overlay.hide()
+
+        overlay_layout = QVBoxLayout(self.mission_overlay)
+        overlay_layout.setContentsMargins(24, 24, 24, 24)
+        overlay_layout.addStretch(1)
+
+        mission_card = QFrame()
+        mission_card.setObjectName("missionModalCard")
+        mission_card.setMaximumWidth(760)
+        card_layout = QVBoxLayout(mission_card)
+        card_layout.setContentsMargins(20, 18, 20, 18)
+        card_layout.setSpacing(10)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.mission_form = MissionFormWidget(self.db)
+        self.mission_form.saved.connect(self._on_mission_saved)
+        self.mission_form.cancelled.connect(self.close_mission_overlay)
+        scroll.setWidget(self.mission_form)
+
+        card_layout.addWidget(scroll)
+        overlay_layout.addWidget(mission_card, alignment=Qt.AlignmentFlag.AlignCenter)
+        overlay_layout.addStretch(1)
+
+    def open_mission_overlay(self) -> None:
+        self.mission_form.prepare_new()
+        blur = QGraphicsBlurEffect(self.content_area)
+        blur.setBlurRadius(8)
+        self.content_area.setGraphicsEffect(blur)
+        self.mission_overlay.setGeometry(self.rect())
+        self.mission_overlay.raise_()
+        self.mission_overlay.show()
+
+    def close_mission_overlay(self) -> None:
+        self.content_area.setGraphicsEffect(None)
+        self.mission_overlay.hide()
+
+    def _on_mission_saved(self) -> None:
+        self.close_mission_overlay()
+        self.refresh()
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        if hasattr(self, "mission_overlay"):
+            self.mission_overlay.setGeometry(self.rect())
 
     def refresh(self) -> None:
         self._refresh_stats()
         self._refresh_recent()
-        db_exists = Path(DB_PATH).exists()
-        self.db_status_label.setText("پایگاه داده: فعال" if db_exists else "پایگاه داده: آماده ایجاد")
-        self.today_label.setText(f"تاریخ امروز: {to_persian_digits(gregorian_to_jalali())}")
-        self.db_path_label.setText(f"مسیر فایل: {DB_PATH}")
 
     def _refresh_stats(self) -> None:
         while self.stats_layout.count():
@@ -83,13 +148,13 @@ class DashboardPage(Page):
 
         stats = self.db.dashboard_stats(gregorian_to_jalali())
         cards = [
-            ("رانندگان فعال", str(stats["drivers"]), "#7C3AED"),
-            ("نقاط ثبت شده", str(stats["locations"]), "#F97316"),
-            ("ماموریت‌های امروز", str(stats["today_missions"]), PRIMARY_COLOR),
-            ("کل ماموریت‌ها", str(stats["missions"]), SUCCESS_COLOR),
+            ("رانندگان فعال", str(stats["drivers"]), "#7C3AED", "#F5F3FF"),
+            ("نقاط ثبت شده", str(stats["locations"]), "#F97316", "#FFF7ED"),
+            ("ماموریت‌های امروز", str(stats["today_missions"]), PRIMARY_COLOR, "#EFF6FF"),
+            ("کل ماموریت‌ها", str(stats["missions"]), SUCCESS_COLOR, "#ECFDF5"),
         ]
-        for column, (title, value, color) in enumerate(cards):
-            self.stats_layout.addWidget(make_stat_card(title, value, color), 0, column)
+        for column, (title, value, color, tint) in enumerate(cards):
+            self.stats_layout.addWidget(make_stat_card(title, value, color, tint), 0, column)
 
     def _refresh_recent(self) -> None:
         missions = self.db.list_missions(limit=10)

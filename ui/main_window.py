@@ -104,7 +104,7 @@ class MainWindow(QMainWindow):
             button.setCursor(Qt.CursorShape.PointingHandCursor)
             button.clicked.connect(lambda checked=False, page=index: self._select_page(page))
             self.nav_buttons.append(button)
-            layout.addWidget(button)
+            layout.addWidget(button, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         layout.addStretch(1)
         self.weekday_label = QLabel(persian_weekday_name())

@@ -166,9 +166,13 @@ class Page(QWidget):
         return button
 
 
-def make_stat_card(title: str, value: str, accent: str = PRIMARY_COLOR) -> QFrame:
+def make_stat_card(title: str, value: str, accent: str = PRIMARY_COLOR, tint: str = "#FFFFFF") -> QFrame:
     frame = QFrame()
     frame.setObjectName("statCard")
+    frame.setProperty("tinted", True)
+    frame.setStyleSheet(
+        f"QFrame#statCard {{ background: {tint}; border: 1px solid {accent}33; border-radius: 18px; }}"
+    )
     layout = QVBoxLayout(frame)
     layout.setContentsMargins(18, 16, 18, 16)
     layout.setSpacing(8)
@@ -177,6 +181,7 @@ def make_stat_card(title: str, value: str, accent: str = PRIMARY_COLOR) -> QFram
     value_label = QLabel(value)
     value_label.setText(to_persian_digits(value))
     value_label.setObjectName("statValue")
+    value_label.setStyleSheet(f"color: {accent};")
     accent_bar = QFrame()
     accent_bar.setFixedHeight(4)
     accent_bar.setStyleSheet(f"background: {accent}; border-radius: 2px;")

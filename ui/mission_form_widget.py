@@ -1,0 +1,473 @@
+from __future__ import annotations
+
+import re
+
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import (
+    QComboBox,
+    QDoubleSpinBox,
+    QFrame,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPlainTextEdit,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
+
+from database.db import DatabaseError, DatabaseManager
+from ui.utils import confirm, current_time_text, gregorian_to_jalali, show_error, show_success, to_english_digits, to_persian_digits
+
+
+DATE_RE = re.compile(r"^\d{4}/\d{2}/\d{2}$")
+TIME_RE = re.compile(r"^\d{2}:\d{2}$")
+
+
+class MissionFormWidget(QWidget):
+    saved = Signal()
+    cancelled = Signal()
+
+    MAX_DESTINATIONS = 10
+
+    def __init__(self, db: DatabaseManager, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.db = db
+        self.selected_id: int | None = None
+        self.destination_rows: list[tuple[QWidget, QComboBox, QComboBox]] = []
+        self._formatting_date = False
+        self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        self._build_ui()
+
+    def _build_ui(self) -> None:
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+
+        self.form_title = QLabel("ثبت ماموریت جدید")
+        self.form_title.setObjectName("sectionTitle")
+        layout.addWidget(self.form_title)
+
+        self.driver_combo = QComboBox()
+        self._prepare_input(self.driver_combo)
+        self.driver_combo.currentIndexChanged.connect(self._update_driver_profile)
+        self.driver_profile_label = QLabel("پروفایل راننده و خودرو پس از انتخاب راننده نمایش داده می‌شود.")
+        self.driver_profile_label.setObjectName("profileInfo")
+        self.driver_profile_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.driver_profile_label.setMinimumHeight(30)
+        layout.addWidget(
+            self._two_field_row(
+                "راننده *",
+                self.driver_combo,
+                "پروفایل راننده و خودرو",
+                self.driver_profile_label,
+                35,
+                65,
+            )
+        )
+
+        self.date_input = QLineEdit()
+        self._prepare_input(self.date_input)
+        self.date_input.setPlaceholderText("yyyy/mm/dd")
+        self.date_input.setMaxLength(10)
+        self.date_input.textEdited.connect(self._format_date)
+        self.time_input = QLineEdit()
+        self._prepare_input(self.time_input)
+        self.time_input.setPlaceholderText("HH:MM")
+        layout.addWidget(self._two_field_row("تاریخ *", self.date_input, "ساعت *", self.time_input, 1, 1))
+
+        self.origin_category_combo = QComboBox()
+        self.origin_location_combo = QComboBox()
+        self._prepare_input(self.origin_category_combo)
+        self._prepare_input(self.origin_location_combo)
+        self.origin_category_combo.currentIndexChanged.connect(
+            lambda: self._populate_location_combo(self.origin_category_combo, self.origin_location_combo)
+        )
+        origin_group = QGroupBox("مبدا")
+        origin_group.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        origin_layout = QVBoxLayout(origin_group)
+        origin_layout.setContentsMargins(10, 10, 10, 8)
+        origin_layout.setSpacing(6)
+        origin_layout.addWidget(
+            self._two_field_row(
+                "دسته‌بندی مبدا *",
+                self.origin_category_combo,
+                "نقطه مبدا *",
+                self.origin_location_combo,
+                35,
+                65,
+            )
+        )
+        layout.addWidget(origin_group)
+
+        destinations_group = QGroupBox("مقصدها")
+        destinations_group.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        destinations_layout = QVBoxLayout(destinations_group)
+        destinations_layout.setContentsMargins(10, 10, 10, 8)
+        destinations_layout.setSpacing(6)
+        self.destinations_container = QVBoxLayout()
+        self.destinations_container.setDirection(QVBoxLayout.Direction.TopToBottom)
+        self.destinations_container.setSpacing(6)
+        self.destinations_container.setContentsMargins(0, 0, 0, 0)
+        destinations_layout.addLayout(self.destinations_container)
+        layout.addWidget(destinations_group)
+
+        self.distance_input = QDoubleSpinBox()
+        self._prepare_input(self.distance_input)
+        self.distance_input.setRange(0, 1_000_000)
+        self.distance_input.setDecimals(1)
+        self.distance_input.setSuffix(" km")
+        self.passengers_input = QLineEdit()
+        self._prepare_input(self.passengers_input)
+        self.passengers_input.setPlaceholderText("مثال: علی احمدی و رضا محمدی")
+        self.description_input = QPlainTextEdit()
+        self._prepare_input(self.description_input)
+        self.description_input.setFixedHeight(56)
+        layout.addWidget(self._labeled_row("مسافت *", self.distance_input))
+        layout.addWidget(self._labeled_row("سرنشینان", self.passengers_input))
+        layout.addWidget(self._labeled_row("توضیحات", self.description_input))
+
+        buttons = QHBoxLayout()
+        buttons.setDirection(QHBoxLayout.Direction.RightToLeft)
+        self.save_button = self._action_button("ثبت", "primary")
+        back_button = self._action_button("بازگشت", "ghost")
+        self.save_button.clicked.connect(self.save_mission)
+        back_button.clicked.connect(self.cancelled.emit)
+        buttons.addWidget(self.save_button)
+        buttons.addWidget(back_button)
+        layout.addLayout(buttons)
+
+    def _action_button(self, text: str, role: str) -> QPushButton:
+        button = QPushButton(text)
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.setProperty("role", role)
+        return button
+
+    def _labeled_row(self, label: str, widget: QWidget) -> QWidget:
+        return self._field_box(label, widget)
+
+    def _two_field_row(
+        self,
+        label_a: str,
+        widget_a: QWidget,
+        label_b: str,
+        widget_b: QWidget,
+        stretch_a: int,
+        stretch_b: int,
+    ) -> QWidget:
+        row = QWidget()
+        row.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        layout = QHBoxLayout(row)
+        layout.setDirection(QHBoxLayout.Direction.LeftToRight)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+        layout.addWidget(self._field_box(label_b, widget_b), stretch=stretch_b)
+        layout.addWidget(self._field_box(label_a, widget_a), stretch=stretch_a)
+        return row
+
+    def _field_box(self, label: str, widget: QWidget) -> QFrame:
+        box = QFrame()
+        box.setObjectName("fieldBox")
+        box.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        layout = QVBoxLayout(box)
+        layout.setContentsMargins(10, 6, 10, 8)
+        layout.setSpacing(4)
+        label_widget = QLabel(label)
+        label_widget.setObjectName("fieldLabel")
+        label_widget.setAlignment(Qt.AlignmentFlag.AlignRight)
+        layout.addWidget(label_widget)
+        layout.addWidget(widget)
+        return box
+
+    def _prepare_input(self, widget: QWidget) -> None:
+        widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        widget.setMinimumHeight(30)
+        if isinstance(widget, QLineEdit):
+            widget.setAlignment(Qt.AlignmentFlag.AlignRight)
+        elif isinstance(widget, QPlainTextEdit):
+            widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        elif isinstance(widget, QDoubleSpinBox):
+            widget.setAlignment(Qt.AlignmentFlag.AlignRight)
+
+    def refresh_combos(self) -> None:
+        current_driver = self.driver_combo.currentData()
+        self.driver_combo.blockSignals(True)
+        self.driver_combo.clear()
+        for driver in self.db.list_drivers():
+            self.driver_combo.addItem(driver["full_name"], driver["id"])
+        index = self.driver_combo.findData(current_driver)
+        if index >= 0:
+            self.driver_combo.setCurrentIndex(index)
+        self.driver_combo.blockSignals(False)
+        self._populate_category_combo(self.origin_category_combo)
+        self._populate_location_combo(self.origin_category_combo, self.origin_location_combo)
+        for _, category_combo, location_combo in self.destination_rows:
+            self._populate_category_combo(category_combo)
+            self._populate_location_combo(category_combo, location_combo)
+        self._update_driver_profile()
+
+    def _populate_category_combo(self, combo: QComboBox) -> None:
+        current = combo.currentData()
+        combo.blockSignals(True)
+        combo.clear()
+        for category in self.db.list_categories():
+            combo.addItem(f"{to_persian_digits(category['sort_order'])} - {category['title']}", category["id"])
+        index = combo.findData(current)
+        if index >= 0:
+            combo.setCurrentIndex(index)
+        combo.blockSignals(False)
+
+    def _populate_location_combo(self, category_combo: QComboBox, location_combo: QComboBox) -> None:
+        category_id = category_combo.currentData()
+        current = location_combo.currentText()
+        location_combo.blockSignals(True)
+        location_combo.clear()
+        for location in self.db.list_locations():
+            if category_id is None or location["category_id"] == category_id:
+                location_combo.addItem(location["title"])
+        if current:
+            location_combo.setCurrentText(current)
+        location_combo.blockSignals(False)
+
+    def add_destination_row(self, selected_category_id: int | None = None, selected_location: str = "") -> None:
+        if len(self.destination_rows) >= self.MAX_DESTINATIONS:
+            show_error(self, "حداکثر 10 مقصد قابل ثبت است.")
+            return
+        row = QWidget()
+        row.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        layout = QHBoxLayout(row)
+        layout.setDirection(QHBoxLayout.Direction.LeftToRight)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+        category_combo = QComboBox()
+        location_combo = QComboBox()
+        self._prepare_input(category_combo)
+        self._prepare_input(location_combo)
+        add_button = QPushButton("+")
+        add_button.setObjectName("destinationActionButton")
+        add_button.setProperty("role", "secondary")
+        add_button.setFixedSize(34, 34)
+        add_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        add_button.clicked.connect(lambda: self.add_destination_row())
+        remove_button = QPushButton("×")
+        remove_button.setObjectName("destinationActionButton")
+        remove_button.setProperty("role", "danger")
+        remove_button.setFixedSize(34, 34)
+        remove_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        remove_button.clicked.connect(lambda: self.remove_destination_row(row))
+        category_combo.currentIndexChanged.connect(
+            lambda: self._populate_location_combo(category_combo, location_combo)
+        )
+        self._populate_category_combo(category_combo)
+        if selected_category_id is not None:
+            index = category_combo.findData(selected_category_id)
+            if index >= 0:
+                category_combo.setCurrentIndex(index)
+        self._populate_location_combo(category_combo, location_combo)
+        if selected_location:
+            location_combo.setCurrentText(selected_location)
+        actions = QWidget()
+        actions.setObjectName("destinationActions")
+        actions_layout = QHBoxLayout(actions)
+        actions_layout.setDirection(QHBoxLayout.Direction.LeftToRight)
+        actions_layout.setContentsMargins(0, 0, 0, 0)
+        actions_layout.setSpacing(6)
+        actions_layout.addWidget(add_button)
+        actions_layout.addWidget(remove_button)
+        layout.addWidget(actions)
+        layout.addWidget(self._field_box("نقطه مقصد *", location_combo), stretch=65)
+        layout.addWidget(self._field_box("دسته‌بندی مقصد *", category_combo), stretch=35)
+        self.destinations_container.addWidget(row)
+        self.destination_rows.append((row, category_combo, location_combo))
+        self._sync_destination_action_buttons()
+
+    def remove_destination_row(self, row: QWidget) -> None:
+        if len(self.destination_rows) <= 1:
+            return
+        for index, (widget, _, _) in enumerate(self.destination_rows):
+            if widget is row:
+                self.destination_rows.pop(index)
+                widget.deleteLater()
+                break
+        self._sync_destination_action_buttons()
+
+    def _sync_destination_action_buttons(self) -> None:
+        single_row = len(self.destination_rows) <= 1
+        at_limit = len(self.destination_rows) >= self.MAX_DESTINATIONS
+        for row, _, _ in self.destination_rows:
+            buttons = row.findChildren(QPushButton, "destinationActionButton")
+            for button in buttons:
+                if button.text() == "×":
+                    button.setEnabled(not single_row)
+                elif button.text() == "+":
+                    button.setEnabled(not at_limit)
+
+    def prepare_new(self) -> None:
+        self.selected_id = None
+        self.form_title.setText("ثبت ماموریت جدید")
+        self.save_button.setText("ثبت")
+        self.clear_form()
+        self.refresh_combos()
+
+    def load_mission(self, mission: dict) -> None:
+        self.selected_id = int(mission["id"])
+        self.form_title.setText("ویرایش ماموریت")
+        self.save_button.setText("ذخیره تغییرات")
+        self.refresh_combos()
+        driver_index = self.driver_combo.findData(mission["driver_id"])
+        if driver_index >= 0:
+            self.driver_combo.setCurrentIndex(driver_index)
+        self.date_input.setText(to_persian_digits(mission["mission_date"]))
+        self.time_input.setText(to_persian_digits(mission["mission_time"]))
+        origin_category_id = self._category_id_for_location(mission["origin"])
+        if origin_category_id is not None:
+            origin_category_index = self.origin_category_combo.findData(origin_category_id)
+            if origin_category_index >= 0:
+                self.origin_category_combo.setCurrentIndex(origin_category_index)
+                self._populate_location_combo(self.origin_category_combo, self.origin_location_combo)
+        self.origin_location_combo.setCurrentText(mission["origin"])
+        self._clear_destination_rows()
+        for destination in [item.strip() for item in mission["destination"].split("،") if item.strip()]:
+            self.add_destination_row(
+                selected_category_id=self._category_id_for_location(destination),
+                selected_location=destination,
+            )
+        if not self.destination_rows:
+            self.add_destination_row()
+        self.distance_input.setValue(float(mission["distance"] or 0))
+        self.passengers_input.setText(mission["passengers"] or "")
+        self.description_input.setPlainText(mission["description"] or "")
+
+    def collect_form_data(self) -> dict | None:
+        driver = self._selected_driver()
+        destinations = [combo.currentText().strip() for _, _, combo in self.destination_rows if combo.currentText().strip()]
+        data = {
+            "driver_id": self.driver_combo.currentData(),
+            "vehicle": self._driver_vehicle_text(driver),
+            "mission_date": to_english_digits(self.date_input.text().strip()),
+            "mission_time": to_english_digits(self.time_input.text().strip()),
+            "origin": self.origin_location_combo.currentText().strip(),
+            "destination": "، ".join(destinations),
+            "distance": self.distance_input.value(),
+            "passengers": self.passengers_input.text().strip(),
+            "description": self.description_input.toPlainText().strip(),
+        }
+        if data["driver_id"] is None:
+            show_error(self, "راننده را انتخاب کنید.")
+            return None
+        if not self._is_valid_date(data["mission_date"]):
+            show_error(self, "تاریخ باید با فرمت yyyy/mm/dd وارد شود.")
+            return None
+        if not self._is_valid_time(data["mission_time"]):
+            show_error(self, "ساعت باید با فرمت 24 ساعته HH:MM وارد شود.")
+            return None
+        if not data["origin"] or not destinations:
+            show_error(self, "مبدا و حداقل یک مقصد را انتخاب کنید.")
+            return None
+        if float(data["distance"]) <= 0:
+            show_error(self, "مسافت را به صورت دستی وارد کنید.")
+            return None
+        return data
+
+    def save_mission(self) -> None:
+        data = self.collect_form_data()
+        if data is None:
+            return
+        action_text = "ویرایش" if self.selected_id is not None else "ثبت"
+        if not confirm(self, f"آیا از {action_text} ماموریت مطمئن هستید؟"):
+            return
+        try:
+            if self.selected_id is None:
+                self.db.add_mission(data)
+            else:
+                self.db.update_mission(self.selected_id, data)
+            show_success(self, "ماموریت با موفقیت ثبت شد.")
+            self.saved.emit()
+        except DatabaseError as exc:
+            show_error(self, f"ثبت ماموریت انجام نشد: {exc}")
+
+    def clear_form(self) -> None:
+        self.date_input.setText(to_persian_digits(gregorian_to_jalali()))
+        self.time_input.setText(to_persian_digits(current_time_text()[:5]))
+        self.distance_input.setValue(0)
+        self.passengers_input.clear()
+        self.description_input.clear()
+        self._clear_destination_rows()
+        self.add_destination_row()
+        if self.origin_category_combo.count():
+            self.origin_category_combo.setCurrentIndex(0)
+        self._populate_location_combo(self.origin_category_combo, self.origin_location_combo)
+
+    def _clear_destination_rows(self) -> None:
+        for row, _, _ in self.destination_rows:
+            row.deleteLater()
+        self.destination_rows.clear()
+
+    def _selected_driver(self) -> dict | None:
+        driver_id = self.driver_combo.currentData()
+        if driver_id is None:
+            return None
+        for driver in self.db.list_drivers():
+            if int(driver["id"]) == int(driver_id):
+                return driver
+        return None
+
+    def _update_driver_profile(self) -> None:
+        driver = self._selected_driver()
+        if not driver:
+            self.driver_profile_label.setText("پروفایل راننده و خودرو پس از انتخاب راننده نمایش داده می‌شود.")
+            return
+        self.driver_profile_label.setText(
+            " | ".join(
+                [
+                    f"راننده: {driver['full_name']}",
+                    f"خودرو: {self._driver_vehicle_text(driver)}",
+                    f"موبایل: {to_persian_digits(driver.get('mobile') or '-')}",
+                ]
+            )
+        )
+
+    @staticmethod
+    def _driver_vehicle_text(driver: dict | None) -> str:
+        if not driver:
+            return ""
+        parts = [driver.get("car_model", ""), driver.get("car_year", ""), driver.get("car_color", "")]
+        return " - ".join(part for part in parts if part).strip()
+
+    def _category_id_for_location(self, title: str) -> int | None:
+        for location in self.db.list_locations():
+            if location["title"] == title:
+                return int(location["category_id"])
+        return None
+
+    def _format_date(self, text: str) -> None:
+        if self._formatting_date:
+            return
+        self._formatting_date = True
+        digits = "".join(ch for ch in to_english_digits(text) if ch.isdigit())[:8]
+        if len(digits) <= 4:
+            formatted = digits
+        elif len(digits) <= 6:
+            formatted = f"{digits[:4]}/{digits[4:]}"
+        else:
+            formatted = f"{digits[:4]}/{digits[4:6]}/{digits[6:]}"
+        self.date_input.setText(to_persian_digits(formatted))
+        self.date_input.setCursorPosition(len(formatted))
+        self._formatting_date = False
+
+    @staticmethod
+    def _is_valid_date(value: str) -> bool:
+        value = to_english_digits(value)
+        if not DATE_RE.fullmatch(value):
+            return False
+        _, month, day = (int(part) for part in value.split("/"))
+        return 1 <= month <= 12 and 1 <= day <= 31
+
+    @staticmethod
+    def _is_valid_time(value: str) -> bool:
+        value = to_english_digits(value)
+        if not TIME_RE.fullmatch(value):
+            return False
+        hour, minute = (int(part) for part in value.split(":"))
+        return 0 <= hour <= 23 and 0 <= minute <= 59
