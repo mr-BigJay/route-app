@@ -189,9 +189,9 @@ class DriversPage(Page):
         )
         personal_layout.addWidget(
             self._two_field_row(
-                "شماره موبایل راننده *",
+                "شماره موبایل *",
                 self.mobile_input,
-                "شماره ملی راننده *",
+                "شماره ملی *",
                 self.national_id_input,
             )
         )
