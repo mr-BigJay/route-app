@@ -108,6 +108,7 @@ class LocationsPage(Page):
         return {
             "chevron_down": QIcon(str(icons_dir / "chevron-down.svg")),
             "chevron_left": QIcon(str(icons_dir / "chevron-left.svg")),
+            "chevron_right": QIcon(str(icons_dir / "chevron-right.svg")),
             "folder": QIcon(str(icons_dir / "tree-folder.svg")),
             "pin": QIcon(str(icons_dir / "tree-pin.svg")),
         }
@@ -127,11 +128,13 @@ class LocationsPage(Page):
         title = QLabel("ساختار درختی نقاط")
         title.setObjectName("locationsTreeTitle")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         subtitle = QLabel("دسته‌بندی‌ها و نقاط ثبت‌شده را مشاهده و مدیریت کنید")
         subtitle.setObjectName("locationsTreeSubtitle")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        header_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignHCenter)
-        header_layout.addWidget(subtitle, alignment=Qt.AlignmentFlag.AlignHCenter)
+        subtitle.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        header_layout.addWidget(title)
+        header_layout.addWidget(subtitle)
 
         tree_wrap = QFrame()
         tree_wrap.setObjectName("locationsTreeWrap")
@@ -144,7 +147,7 @@ class LocationsPage(Page):
         self.tree.setColumnCount(1)
         self.tree.setHeaderHidden(True)
         self.tree.setRootIsDecorated(False)
-        self.tree.setIndentation(28)
+        self.tree.setIndentation(34)
         self.tree.setUniformRowHeights(False)
         self.tree.setAnimated(True)
         self.tree.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
