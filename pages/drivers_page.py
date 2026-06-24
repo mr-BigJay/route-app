@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
 )
 
 from database.db import DatabaseError, DatabaseManager
-from ui.form_widgets import NoWheelComboBox
+from ui.form_widgets import NoWheelComboBox, configure_combo_field, configure_line_edit_field
 from ui.utils import Page, confirm, show_error, show_success, to_english_digits, to_persian_digits
 
 
@@ -320,8 +320,8 @@ class DriversPage(Page):
 
     def _prepare_input(self, widget: QLineEdit) -> None:
         widget.setObjectName("driverFormInput")
-        widget.setMinimumHeight(36)
         widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        configure_line_edit_field(widget)
         self._ensure_input_alignment(widget)
 
     def _ensure_input_alignment(self, widget: QLineEdit) -> None:
@@ -337,7 +337,6 @@ class DriversPage(Page):
         combo.setObjectName("driverFormInput")
         combo.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         combo.setAttribute(Qt.WidgetAttribute.WA_RightToLeft, True)
-        combo.setMinimumHeight(36)
         combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         combo.setEditable(True)
         combo.currentTextChanged.connect(lambda _text: self._ensure_combo_alignment(combo))
@@ -351,7 +350,7 @@ class DriversPage(Page):
         line_edit.setReadOnly(True)
         line_edit.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         line_edit.setAttribute(Qt.WidgetAttribute.WA_RightToLeft, True)
-        line_edit.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        configure_combo_field(combo)
 
     def _update_distance_rate_visibility(self) -> None:
         is_rental = self.vehicle_status_combo.currentText() == VEHICLE_STATUS_RENTAL

@@ -17,7 +17,14 @@ from PySide6.QtWidgets import (
 )
 
 from database.db import DatabaseError, DatabaseManager
-from ui.form_widgets import NoWheelComboBox, NoWheelDoubleSpinBox
+from ui.form_widgets import (
+    NoWheelComboBox,
+    NoWheelDoubleSpinBox,
+    FORM_FIELD_MIN_HEIGHT,
+    apply_form_field_font,
+    configure_combo_field,
+    configure_line_edit_field,
+)
 from ui.utils import confirm, current_time_text, gregorian_to_jalali, show_error, show_success, to_english_digits, to_persian_digits
 
 
@@ -212,8 +219,8 @@ class MissionFormWidget(QWidget):
 
     def _prepare_input(self, widget: QLineEdit) -> None:
         widget.setObjectName("missionFormInput")
-        widget.setMinimumHeight(34)
         widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        configure_line_edit_field(widget)
         self._ensure_line_edit_alignment(widget)
 
     def _ensure_line_edit_alignment(self, widget: QLineEdit) -> None:
@@ -229,12 +236,12 @@ class MissionFormWidget(QWidget):
         widget.setObjectName("missionFormInput")
         widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         widget.setAttribute(Qt.WidgetAttribute.WA_RightToLeft, True)
+        apply_form_field_font(widget)
 
     def _prepare_combo(self, combo: NoWheelComboBox) -> None:
         combo.setObjectName("missionFormInput")
         combo.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         combo.setAttribute(Qt.WidgetAttribute.WA_RightToLeft, True)
-        combo.setMinimumHeight(34)
         combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         combo.setEditable(True)
         combo.currentTextChanged.connect(lambda _text: self._ensure_combo_alignment(combo))
@@ -248,12 +255,13 @@ class MissionFormWidget(QWidget):
         line_edit.setReadOnly(True)
         line_edit.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         line_edit.setAttribute(Qt.WidgetAttribute.WA_RightToLeft, True)
-        line_edit.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        configure_combo_field(combo)
 
     def _prepare_spin(self, widget: NoWheelDoubleSpinBox) -> None:
         widget.setObjectName("missionFormInput")
         widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        widget.setMinimumHeight(34)
+        apply_form_field_font(widget)
+        widget.setMinimumHeight(FORM_FIELD_MIN_HEIGHT)
         widget.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
     def refresh_combos(self) -> None:
