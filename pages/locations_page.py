@@ -144,7 +144,7 @@ class LocationsPage(Page):
         self.tree.setHeaderHidden(True)
         self.tree.setRootIsDecorated(False)
         self.tree.setIndentation(28)
-        self.tree.setUniformItemSizes(False)
+        self.tree.setUniformRowHeights(False)
         self.tree.setAnimated(True)
         self.tree.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.tree.setItemDelegate(LocationsTreeDelegate(self.tree, self._tree_icons, self.tree))
