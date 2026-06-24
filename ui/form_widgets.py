@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QComboBox, QDoubleSpinBox, QLineEdit, QSpinBox, QW
 
 
 FORM_FIELD_FONT_SIZE = 11
-FORM_FIELD_MIN_HEIGHT = 36
+FORM_FIELD_HEIGHT = 36
 
 
 class NoWheelComboBox(QComboBox):
@@ -32,16 +32,23 @@ def apply_form_field_font(widget: QWidget) -> None:
 
 def configure_line_edit_field(line_edit: QLineEdit) -> None:
     apply_form_field_font(line_edit)
-    line_edit.setMinimumHeight(FORM_FIELD_MIN_HEIGHT)
+    line_edit.setFixedHeight(FORM_FIELD_HEIGHT)
 
 
 def configure_combo_field(combo: QComboBox) -> None:
     apply_form_field_font(combo)
-    combo.setMinimumHeight(FORM_FIELD_MIN_HEIGHT)
+    combo.setFixedHeight(FORM_FIELD_HEIGHT)
     line_edit = combo.lineEdit()
     if line_edit is None:
         return
     apply_form_field_font(line_edit)
-    line_edit.setMinimumHeight(FORM_FIELD_MIN_HEIGHT - 2)
+    line_edit.setFixedHeight(FORM_FIELD_HEIGHT)
     line_edit.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
     line_edit.setFrame(False)
+
+
+def configure_spin_field(spin: QDoubleSpinBox | QSpinBox) -> None:
+    apply_form_field_font(spin)
+    spin.setFixedHeight(FORM_FIELD_HEIGHT)
+    if isinstance(spin, QDoubleSpinBox):
+        spin.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)

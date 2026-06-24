@@ -148,11 +148,13 @@ QFrame#driverFormCard QLabel#fieldLabel {
 QFrame#driverFormCard QLineEdit#driverFormInput {
     qproperty-alignment: 'AlignRight | AlignVCenter';
     min-height: 36px;
-    padding: 4px 10px;
+    max-height: 36px;
+    padding: 0px 10px;
 }
 
 QFrame#driverFormCard QComboBox#driverFormInput {
     min-height: 36px;
+    max-height: 36px;
     padding: 0px 10px 0px 32px;
 }
 
@@ -160,8 +162,9 @@ QFrame#driverFormCard QComboBox#driverFormInput QLineEdit {
     qproperty-alignment: 'AlignRight | AlignVCenter';
     background: transparent;
     border: none;
-    min-height: 32px;
-    padding: 2px 0px;
+    min-height: 36px;
+    max-height: 36px;
+    padding: 0px;
 }
 
 QWidget#driversPage QLabel#pageTitle,
@@ -694,18 +697,23 @@ QWidget#missionFormWidget QLabel#fieldLabel {
 }
 
 QWidget#missionFormWidget QLineEdit#missionFormInput,
-QWidget#missionFormWidget QDoubleSpinBox#missionFormInput {
-    qproperty-alignment: 'AlignRight | AlignVCenter';
+QWidget#missionFormWidget QDoubleSpinBox#missionFormInput,
+QWidget#missionFormWidget QComboBox#missionFormInput {
     min-height: 36px;
+    max-height: 36px;
 }
 
 QWidget#missionFormWidget QLineEdit#missionFormInput,
+QWidget#missionFormWidget QDoubleSpinBox#missionFormInput {
+    qproperty-alignment: 'AlignRight | AlignVCenter';
+    padding: 0px 10px;
+}
+
 QWidget#missionFormWidget QPlainTextEdit#missionFormInput {
-    padding: 4px 10px;
+    padding: 6px 10px;
 }
 
 QWidget#missionFormWidget QComboBox#missionFormInput {
-    min-height: 36px;
     padding: 0px 10px 0px 32px;
 }
 
@@ -713,8 +721,20 @@ QWidget#missionFormWidget QComboBox#missionFormInput QLineEdit {
     qproperty-alignment: 'AlignRight | AlignVCenter';
     background: transparent;
     border: none;
-    min-height: 32px;
-    padding: 2px 0px;
+    min-height: 36px;
+    max-height: 36px;
+    padding: 0px;
+}
+
+QWidget#missionFormWidget QDoubleSpinBox#missionFormInput {
+    padding-left: 32px;
+    padding-right: 10px;
+}
+
+QWidget#missionFormWidget QDoubleSpinBox#missionFormInput::up-button,
+QWidget#missionFormWidget QDoubleSpinBox#missionFormInput::down-button {
+    width: 22px;
+    height: 17px;
 }
 
 QFrame#missionModalCard QGroupBox {

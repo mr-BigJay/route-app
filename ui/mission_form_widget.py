@@ -20,10 +20,11 @@ from database.db import DatabaseError, DatabaseManager
 from ui.form_widgets import (
     NoWheelComboBox,
     NoWheelDoubleSpinBox,
-    FORM_FIELD_MIN_HEIGHT,
+    FORM_FIELD_HEIGHT,
     apply_form_field_font,
     configure_combo_field,
     configure_line_edit_field,
+    configure_spin_field,
 )
 from ui.utils import confirm, current_time_text, gregorian_to_jalali, show_error, show_success, to_english_digits, to_persian_digits
 
@@ -73,7 +74,8 @@ class MissionFormWidget(QWidget):
         self.driver_profile_label = QLabel("پروفایل راننده و خودرو پس از انتخاب راننده نمایش داده می‌شود.")
         self.driver_profile_label.setObjectName("profileInfo")
         self.driver_profile_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        self.driver_profile_label.setMinimumHeight(30)
+        self.driver_profile_label.setMinimumHeight(FORM_FIELD_HEIGHT)
+        self.driver_profile_label.setMaximumHeight(FORM_FIELD_HEIGHT)
         layout.addWidget(
             self._two_field_row(
                 "راننده *",
@@ -260,9 +262,7 @@ class MissionFormWidget(QWidget):
     def _prepare_spin(self, widget: NoWheelDoubleSpinBox) -> None:
         widget.setObjectName("missionFormInput")
         widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        apply_form_field_font(widget)
-        widget.setMinimumHeight(FORM_FIELD_MIN_HEIGHT)
-        widget.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        configure_spin_field(widget)
 
     def refresh_combos(self) -> None:
         current_driver = self.driver_combo.currentData()
