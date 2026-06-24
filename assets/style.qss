@@ -533,7 +533,7 @@ QStatusBar#statusBar {
 }
 
 QLabel#statusCredits {
-    color: #64748B;
+    color: #475569;
     font-size: 11px;
 }
 

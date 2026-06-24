@@ -145,7 +145,7 @@ class MainWindow(QMainWindow):
         credits_layout = QHBoxLayout(credits_container)
         credits_layout.setContentsMargins(0, 0, 0, 0)
         credits_layout.addStretch(1)
-        credits = QLabel("طراحی و توسعه توسط صادق جعفری ، با همکاری علیرضا محمدرضایی")
+        credits = QLabel("طراحی و توسعه توسط صادق جعفری با همکاری علیرضا محمدرضایی")
         credits.setObjectName("statusCredits")
         credits.setAlignment(Qt.AlignmentFlag.AlignCenter)
         credits_layout.addWidget(credits)
