@@ -7,7 +7,6 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
-    QComboBox,
     QFileDialog,
     QFrame,
     QGraphicsBlurEffect,
@@ -27,6 +26,7 @@ from PySide6.QtWidgets import (
 )
 
 from database.db import DatabaseError, DatabaseManager
+from ui.form_widgets import NoWheelComboBox
 from ui.utils import Page, confirm, show_error, show_success, to_english_digits, to_persian_digits
 
 
@@ -227,7 +227,7 @@ class DriversPage(Page):
         self.car_year_input.setMaxLength(4)
         self.car_color_input = QLineEdit()
         self.car_color_input.setPlaceholderText("مثال: سفید")
-        self.vehicle_status_combo = QComboBox()
+        self.vehicle_status_combo = NoWheelComboBox()
         self.vehicle_status_combo.addItem(VEHICLE_STATUS_GOVERNMENT)
         self.vehicle_status_combo.addItem(VEHICLE_STATUS_RENTAL)
         self.vehicle_status_combo.currentTextChanged.connect(self._update_distance_rate_visibility)
@@ -333,7 +333,7 @@ class DriversPage(Page):
             widget.setPlaceholderText(placeholder)
         widget.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
-    def _prepare_combo(self, combo: QComboBox) -> None:
+    def _prepare_combo(self, combo: NoWheelComboBox) -> None:
         combo.setObjectName("driverFormInput")
         combo.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         combo.setAttribute(Qt.WidgetAttribute.WA_RightToLeft, True)
@@ -344,7 +344,7 @@ class DriversPage(Page):
         self._ensure_combo_alignment(combo)
         combo.view().setLayoutDirection(Qt.LayoutDirection.RightToLeft)
 
-    def _ensure_combo_alignment(self, combo: QComboBox) -> None:
+    def _ensure_combo_alignment(self, combo: NoWheelComboBox) -> None:
         line_edit = combo.lineEdit()
         if line_edit is None:
             return

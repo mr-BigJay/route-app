@@ -5,7 +5,6 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
-    QComboBox,
     QFormLayout,
     QFrame,
     QGraphicsBlurEffect,
@@ -14,7 +13,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
-    QSpinBox,
     QSizePolicy,
     QTreeWidget,
     QTreeWidgetItem,
@@ -23,6 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from database.db import DatabaseError, DatabaseManager
+from ui.form_widgets import NoWheelComboBox, NoWheelSpinBox
 from ui.locations_tree_delegate import LocationsTreeDelegate
 from ui.utils import Page, confirm, make_stat_card, show_error, show_success, to_english_digits, to_persian_digits
 
@@ -184,7 +183,7 @@ class LocationsPage(Page):
 
         form = QFormLayout()
         form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
-        self.category_order_input = QSpinBox()
+        self.category_order_input = NoWheelSpinBox()
         self.category_order_input.setRange(1, 999)
         self.category_title_input = QLineEdit()
         self.category_title_input.setPlaceholderText("مثال: اورژانس")
@@ -237,7 +236,7 @@ class LocationsPage(Page):
 
         form = QFormLayout()
         form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
-        self.location_category_combo = QComboBox()
+        self.location_category_combo = NoWheelComboBox()
         self.location_category_combo.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.location_title_input = QLineEdit()
         self.location_title_input.setPlaceholderText("مثال: مرکز کلاچای")
