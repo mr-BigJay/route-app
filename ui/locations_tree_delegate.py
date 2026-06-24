@@ -88,14 +88,6 @@ class LocationsTreeDelegate(QStyledItemDelegate):
         item = self.tree.itemFromIndex(index)
         child_count = item.childCount() if item is not None else 0
         expanded = item.isExpanded() if item is not None else False
-        right_edge = rect.right() - 12
-
-        if child_count > 0:
-            chevron_key = "chevron_down" if expanded else "chevron_left"
-            chevron = self.icons.get(chevron_key)
-            if chevron is not None:
-                chevron.paint(painter, QRect(right_edge - 14, rect.center().y() - 8, 16, 16))
-            right_edge -= 24
 
         badge_text = f"{to_persian_digits(child_count)} نقطه"
         badge_font = QFont(painter.font())
@@ -103,15 +95,22 @@ class LocationsTreeDelegate(QStyledItemDelegate):
         badge_font.setPointSize(max(badge_font.pointSize() - 1, 9))
         painter.setFont(badge_font)
         badge_width = painter.fontMetrics().horizontalAdvance(badge_text) + 18
-        badge_rect = QRect(right_edge - badge_width, rect.center().y() - 11, badge_width, 22)
-        painter.setBrush(QColor(accent))
-        painter.setPen(Qt.PenStyle.NoPen)
+        badge_rect = QRect(rect.left() + 12, rect.center().y() - 11, badge_width, 22)
+        painter.setBrush(QColor("#F1F5F9"))
+        painter.setPen(QPen(QColor("#CBD5E1"), 1))
         painter.drawRoundedRect(badge_rect, 11, 11)
-        painter.setPen(QColor("#FFFFFF"))
+        painter.setPen(QColor("#64748B"))
         painter.drawText(badge_rect, Qt.AlignmentFlag.AlignCenter, badge_text)
-        right_edge -= badge_width + 10
 
-        icon_rect = QRect(rect.left() + 12, rect.center().y() - 12, 24, 24)
+        right_edge = rect.right() - 12
+        if child_count > 0:
+            chevron_key = "chevron_down" if expanded else "chevron_left"
+            chevron = self.icons.get(chevron_key)
+            if chevron is not None:
+                chevron.paint(painter, QRect(right_edge - 14, rect.center().y() - 8, 16, 16))
+            right_edge -= 22
+
+        icon_rect = QRect(right_edge - 24, rect.center().y() - 12, 24, 24)
         painter.setBrush(QColor(accent))
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setOpacity(0.14)
@@ -120,13 +119,15 @@ class LocationsTreeDelegate(QStyledItemDelegate):
         folder = self.icons.get("folder")
         if folder is not None:
             folder.paint(painter, icon_rect)
+        right_edge -= 34
 
         title_font = QFont(painter.font())
         title_font.setBold(True)
         title_font.setPointSize(max(title_font.pointSize(), 10))
         painter.setFont(title_font)
         painter.setPen(QColor("#0F172A" if not is_selected else "#1E3A8A"))
-        title_rect = QRect(icon_rect.right() + 10, rect.top(), right_edge - icon_rect.right() - 10, rect.height())
+        title_left = badge_rect.right() + 12
+        title_rect = QRect(title_left, rect.top(), right_edge - title_left, rect.height())
         painter.drawText(title_rect, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, title)
 
     def _paint_location(

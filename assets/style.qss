@@ -728,6 +728,7 @@ QLabel#locationsTreeTitle {
     font-size: 17px;
     font-weight: 800;
     background: transparent;
+    qproperty-alignment: AlignCenter;
 }
 
 QLabel#locationsTreeSubtitle {
@@ -735,6 +736,7 @@ QLabel#locationsTreeSubtitle {
     font-size: 12px;
     font-weight: 600;
     background: transparent;
+    qproperty-alignment: AlignCenter;
 }
 
 QFrame#locationsTreeWrap {
