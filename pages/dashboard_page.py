@@ -136,25 +136,28 @@ class DashboardPage(Page):
         overlay_layout.setContentsMargins(24, 24, 24, 24)
         overlay_layout.addStretch(1)
 
-        mission_card = QFrame()
-        mission_card.setObjectName("missionModalCard")
-        mission_card.setMaximumWidth(760)
-        card_layout = QVBoxLayout(mission_card)
-        card_layout.setContentsMargins(20, 18, 20, 18)
-        card_layout.setSpacing(10)
+        self.mission_card = QFrame()
+        self.mission_card.setObjectName("missionModalCard")
+        card_layout = QVBoxLayout(self.mission_card)
+        card_layout.setContentsMargins(24, 22, 24, 22)
+        card_layout.setSpacing(12)
 
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.mission_scroll = QScrollArea()
+        self.mission_scroll.setObjectName("missionModalScroll")
+        self.mission_scroll.setWidgetResizable(True)
+        self.mission_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.mission_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.mission_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.mission_form = MissionFormWidget(self.db)
+        self.mission_form.setObjectName("missionFormWidget")
         self.mission_form.saved.connect(self._on_mission_saved)
         self.mission_form.cancelled.connect(self.close_mission_overlay)
-        scroll.setWidget(self.mission_form)
+        self.mission_scroll.setWidget(self.mission_form)
 
-        card_layout.addWidget(scroll)
-        overlay_layout.addWidget(mission_card, alignment=Qt.AlignmentFlag.AlignCenter)
+        card_layout.addWidget(self.mission_scroll)
+        overlay_layout.addWidget(self.mission_card, alignment=Qt.AlignmentFlag.AlignCenter)
         overlay_layout.addStretch(1)
+        self._resize_mission_modal()
 
     def _on_reserve_clicked(self) -> None:
         QMessageBox.information(
@@ -180,10 +183,19 @@ class DashboardPage(Page):
         self.close_mission_overlay()
         self.refresh()
 
+    def _resize_mission_modal(self) -> None:
+        if not hasattr(self, "mission_card"):
+            return
+        card_width = min(980, max(880, int(self.width() * 0.74)))
+        card_height = min(780, max(660, int(self.height() * 0.84)))
+        self.mission_card.setFixedWidth(card_width)
+        self.mission_scroll.setMinimumHeight(card_height)
+
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
         if hasattr(self, "mission_overlay"):
             self.mission_overlay.setGeometry(self.rect())
+        self._resize_mission_modal()
 
     def refresh(self) -> None:
         self._refresh_stats()

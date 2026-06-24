@@ -38,12 +38,13 @@ class MissionFormWidget(QWidget):
         self.destination_rows: list[tuple[QWidget, QComboBox, QComboBox]] = []
         self._formatting_date = False
         self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        self.setObjectName("missionFormWidget")
         self._build_ui()
 
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(12)
 
         self.form_title = QLabel("ثبت ماموریت جدید")
         self.form_title.setObjectName("sectionTitle")

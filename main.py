@@ -18,7 +18,9 @@ BASE_DIR = Path(__file__).resolve().parent
 def load_stylesheet(app: QApplication) -> None:
     style_path = BASE_DIR / "assets" / "style.qss"
     if style_path.exists():
-        app.setStyleSheet(style_path.read_text(encoding="utf-8"))
+        assets_dir = (BASE_DIR / "assets").as_posix()
+        style = style_path.read_text(encoding="utf-8").replace("@ASSETS@", assets_dir)
+        app.setStyleSheet(style)
 
 
 def main() -> int:

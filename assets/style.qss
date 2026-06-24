@@ -217,10 +217,148 @@ QDoubleSpinBox,
 QPlainTextEdit {
     background: #FFFFFF;
     border: 1px solid #CBD5E1;
-    border-radius: 8px;
-    min-height: 32px;
-    padding: 4px 8px;
+    border-radius: 10px;
+    min-height: 36px;
+    padding: 6px 12px;
     selection-background-color: #2563EB;
+}
+
+QComboBox {
+    padding-left: 36px;
+    padding-right: 12px;
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: left center;
+    width: 30px;
+    border: none;
+    border-right: 1px solid #E2E8F0;
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+    background: #F8FAFC;
+}
+
+QComboBox::drop-down:hover {
+    background: #EFF6FF;
+}
+
+QComboBox::down-arrow {
+    image: url(@ASSETS@/icons/chevron-down.svg);
+    width: 12px;
+    height: 12px;
+}
+
+QComboBox:on {
+    border: 1px solid #2563EB;
+}
+
+QComboBox QAbstractItemView {
+    background: #FFFFFF;
+    color: #0F172A;
+    border: 1px solid #BFDBFE;
+    border-radius: 10px;
+    padding: 6px;
+    outline: 0;
+    selection-background-color: #DBEAFE;
+    selection-color: #1D4ED8;
+}
+
+QDoubleSpinBox {
+    padding-left: 12px;
+    padding-right: 36px;
+}
+
+QDoubleSpinBox::up-button,
+QDoubleSpinBox::down-button {
+    subcontrol-origin: border;
+    width: 24px;
+    border: none;
+    background: #F8FAFC;
+}
+
+QDoubleSpinBox::up-button {
+    subcontrol-position: top left;
+    border-bottom: 1px solid #E2E8F0;
+    border-top-left-radius: 10px;
+}
+
+QDoubleSpinBox::down-button {
+    subcontrol-position: bottom left;
+    border-bottom-left-radius: 10px;
+}
+
+QDoubleSpinBox::up-button:hover,
+QDoubleSpinBox::down-button:hover {
+    background: #EFF6FF;
+}
+
+QDoubleSpinBox::up-arrow {
+    image: url(@ASSETS@/icons/chevron-up.svg);
+    width: 10px;
+    height: 10px;
+}
+
+QDoubleSpinBox::down-arrow {
+    image: url(@ASSETS@/icons/chevron-down.svg);
+    width: 10px;
+    height: 10px;
+}
+
+QScrollBar:vertical {
+    background: transparent;
+    width: 10px;
+    margin: 6px 2px 6px 0;
+}
+
+QScrollBar::handle:vertical {
+    background: #CBD5E1;
+    border-radius: 5px;
+    min-height: 48px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #94A3B8;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0;
+    border: none;
+    background: none;
+}
+
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:vertical {
+    background: none;
+}
+
+QScrollBar:horizontal {
+    background: transparent;
+    height: 10px;
+    margin: 0 6px 2px 6px;
+}
+
+QScrollBar::handle:horizontal {
+    background: #CBD5E1;
+    border-radius: 5px;
+    min-width: 48px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background: #94A3B8;
+}
+
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal {
+    width: 0;
+    border: none;
+    background: none;
+}
+
+QScrollBar::add-page:horizontal,
+QScrollBar::sub-page:horizontal {
+    background: none;
 }
 
 QLineEdit {
@@ -346,5 +484,29 @@ QFrame#missionOverlay {
 QFrame#missionModalCard {
     background: #FFFFFF;
     border: 1px solid #BFDBFE;
-    border-radius: 18px;
+    border-radius: 20px;
+}
+
+QScrollArea#missionModalScroll {
+    background: transparent;
+    border: none;
+}
+
+QWidget#missionFormWidget {
+    background: transparent;
+}
+
+QFrame#missionModalCard QGroupBox {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    margin-top: 14px;
+    padding: 14px;
+}
+
+QFrame#missionModalCard QLabel#sectionTitle {
+    color: #1E3A8A;
+    font-size: 18px;
+    font-weight: 800;
+    padding-bottom: 4px;
 }
