@@ -118,20 +118,18 @@ QScrollArea#driverFormScroll > QWidget > QWidget {
     border: none;
 }
 
-QGroupBox#driverFormGroup {
+QFrame#driverFormGroup {
     background: #F8FAFC;
     border: 1px solid #E2E8F0;
     border-radius: 14px;
-    margin-top: 14px;
     padding: 14px 12px 12px 12px;
-    font-weight: 700;
 }
 
-QGroupBox#driverFormGroup::title {
-    subcontrol-origin: margin;
-    subcontrol-position: top right;
-    padding: 0 10px;
+QLabel#driverSectionTitle {
     color: #1E3A8A;
+    font-size: 13px;
+    font-weight: 700;
+    qproperty-alignment: AlignRight;
 }
 
 QFrame#driverFieldBox {
@@ -156,6 +154,18 @@ QFrame#driverFormCard QLineEdit {
 QFrame#driverFormCard QComboBox {
     padding-right: 12px;
     padding-left: 36px;
+}
+
+QFrame#driverFormCard QComboBox QLineEdit {
+    qproperty-alignment: AlignRight;
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+QWidget#driversPage QLabel#pageTitle,
+QWidget#driversPage QLabel#pageSubtitle {
+    qproperty-alignment: AlignCenter;
 }
 
 QFrame#card,

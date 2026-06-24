@@ -11,7 +11,6 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QFrame,
     QGraphicsBlurEffect,
-    QGroupBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -44,6 +43,7 @@ class DriversPage(Page):
 
     def __init__(self, db: DatabaseManager) -> None:
         super().__init__("مدیریت رانندگان", "ثبت راننده جدید و مدیریت لیست رانندگان")
+        self.setObjectName("driversPage")
         self.db = db
         self.drivers_cache: list[dict] = []
         self.editing_driver_id: int | None = None
@@ -62,6 +62,21 @@ class DriversPage(Page):
         self.root_layout.addWidget(self.stack, stretch=1)
         self._build_profile_overlay()
         self._refresh_active_count()
+        self._center_page_header()
+
+    def _center_page_header(self) -> None:
+        header = self.root_layout.itemAt(0).widget()
+        if header is None:
+            return
+        layout = header.layout()
+        if layout is None:
+            return
+        for index in range(layout.count()):
+            item = layout.itemAt(index)
+            widget = item.widget()
+            if widget is not None:
+                widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                layout.setAlignment(widget, Qt.AlignmentFlag.AlignHCenter)
 
     def _build_drivers_summary(self) -> QFrame:
         card = QFrame()
@@ -153,13 +168,16 @@ class DriversPage(Page):
         body_layout.setContentsMargins(20, 18, 20, 18)
         body_layout.setSpacing(14)
 
-        personal_group = QGroupBox("اطلاعات فردی")
+        personal_group = QFrame()
         personal_group.setObjectName("driverFormGroup")
         personal_group.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        personal_group.setAlignment(Qt.AlignmentFlag.AlignRight)
         personal_layout = QVBoxLayout(personal_group)
         personal_layout.setContentsMargins(12, 14, 12, 12)
         personal_layout.setSpacing(10)
+        personal_title = QLabel("اطلاعات فردی")
+        personal_title.setObjectName("driverSectionTitle")
+        personal_title.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        personal_layout.addWidget(personal_title)
 
         self.first_name_input = QLineEdit()
         self.first_name_input.setPlaceholderText("فقط حروف فارسی")
@@ -197,13 +215,16 @@ class DriversPage(Page):
         )
         personal_layout.addWidget(self._field_box("تاریخ تولد *", self.birth_date_input))
 
-        vehicle_group = QGroupBox("اطلاعات خودرو")
+        vehicle_group = QFrame()
         vehicle_group.setObjectName("driverFormGroup")
         vehicle_group.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        vehicle_group.setAlignment(Qt.AlignmentFlag.AlignRight)
         vehicle_layout = QVBoxLayout(vehicle_group)
         vehicle_layout.setContentsMargins(12, 14, 12, 12)
         vehicle_layout.setSpacing(10)
+        vehicle_title = QLabel("اطلاعات خودرو")
+        vehicle_title.setObjectName("driverSectionTitle")
+        vehicle_title.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        vehicle_layout.addWidget(vehicle_title)
 
         self.car_model_input = QLineEdit()
         self.car_model_input.setPlaceholderText("مثال: سمند")
@@ -285,10 +306,18 @@ class DriversPage(Page):
         layout = QVBoxLayout(box)
         layout.setContentsMargins(10, 8, 10, 10)
         layout.setSpacing(6)
+        label_row = QWidget()
+        label_row.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        label_layout = QHBoxLayout(label_row)
+        label_layout.setContentsMargins(0, 0, 0, 0)
         label_widget = QLabel(label)
         label_widget.setObjectName("fieldLabel")
         label_widget.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        layout.addWidget(label_widget)
+        label_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        label_layout.addWidget(label_widget)
+        label_layout.addStretch(1)
+        layout.addWidget(label_row)
+        widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         layout.addWidget(widget)
         return box
 
@@ -296,10 +325,18 @@ class DriversPage(Page):
         widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         widget.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         widget.setMinimumHeight(36)
+        widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
     def _prepare_combo(self, combo: QComboBox) -> None:
         combo.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         combo.setMinimumHeight(36)
+        combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        combo.setEditable(True)
+        line_edit = combo.lineEdit()
+        if line_edit is not None:
+            line_edit.setReadOnly(True)
+            line_edit.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+            line_edit.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         combo.view().setLayoutDirection(Qt.LayoutDirection.RightToLeft)
 
     def _update_distance_rate_visibility(self) -> None:
