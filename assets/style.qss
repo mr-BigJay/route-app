@@ -1027,45 +1027,111 @@ QPushButton#driverListButton[variant="deactivate"]:hover {
 }
 
 QLabel#driversPageSizeLabel,
-QLabel#driversPageInfo {
-    color: #475569;
-    font-size: 12px;
-    font-weight: 600;
+QLabel#driversPageRangeInfo {
+    color: #64748B;
+    font-size: 13px;
+    font-weight: 500;
+    background: transparent;
+}
+
+QFrame#driversTableFooter {
+    background: transparent;
+    border-top: 1px solid #E2E8F0;
 }
 
 QComboBox#driversPageSizeCombo {
     background: #FFFFFF;
-    border: 1px solid #BFDBFE;
-    border-radius: 8px;
-    padding: 4px 10px;
-    min-width: 64px;
-    color: #1E3A8A;
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+    padding: 4px 8px;
+    min-width: 52px;
+    min-height: 28px;
+    color: #334155;
     font-weight: 600;
 }
 
 QComboBox#driversPageSizeCombo:focus {
-    border: 1px solid #2563EB;
+    border: 1px solid #94A3B8;
 }
 
-QPushButton#driversPageButton {
-    background: #EFF6FF;
-    color: #2563EB;
-    border: 1px solid #BFDBFE;
-    border-radius: 8px;
-    padding: 6px 16px;
-    min-height: 32px;
+QComboBox#driversPageSizeCombo::drop-down {
+    border: none;
+    width: 18px;
+}
+
+QPushButton#driversPageNavButton {
+    background: #FFFFFF;
+    color: #64748B;
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+    padding: 0;
+    min-height: 0;
+    font-size: 18px;
     font-weight: 600;
 }
 
-QPushButton#driversPageButton:hover:enabled {
-    background: #DBEAFE;
-    border: 1px solid #93C5FD;
+QPushButton#driversPageNavButton:hover:enabled {
+    background: #F8FAFC;
+    border: 1px solid #CBD5E1;
+    color: #334155;
 }
 
-QPushButton#driversPageButton:disabled {
+QPushButton#driversPageNavButton:disabled {
     background: #F8FAFC;
-    color: #94A3B8;
+    color: #CBD5E1;
     border: 1px solid #E2E8F0;
+}
+
+QLabel#driversPageNumber {
+    background: #2563EB;
+    color: #FFFFFF;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+QFrame#driverStatusBadge[active="true"] {
+    background: #E8F5E9;
+    border: none;
+    border-radius: 6px;
+}
+
+QFrame#driverStatusBadge[active="false"] {
+    background: #F3F4F6;
+    border: none;
+    border-radius: 6px;
+}
+
+QLabel#driverStatusDot[active="true"] {
+    background: #2E7D32;
+    border-radius: 4px;
+    min-width: 8px;
+    max-width: 8px;
+    min-height: 8px;
+    max-height: 8px;
+}
+
+QLabel#driverStatusDot[active="false"] {
+    background: #9CA3AF;
+    border-radius: 4px;
+    min-width: 8px;
+    max-width: 8px;
+    min-height: 8px;
+    max-height: 8px;
+}
+
+QLabel#driverStatusText[active="true"] {
+    color: #2E7D32;
+    font-size: 12px;
+    font-weight: 600;
+    background: transparent;
+}
+
+QLabel#driverStatusText[active="false"] {
+    color: #6B7280;
+    font-size: 12px;
+    font-weight: 600;
+    background: transparent;
 }
 
 QPushButton#locationPageButton {

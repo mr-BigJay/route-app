@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 )
 
 from database.db import DatabaseError, DatabaseManager
+from ui.driver_status_badge import DriverStatusBadge
 from ui.form_widgets import NoWheelComboBox, configure_combo_field, configure_line_edit_field
 from ui.utils import Page, confirm, show_error, show_success, to_english_digits, to_persian_digits
 
@@ -446,10 +447,20 @@ class DriversPage(Page):
         self.table.setShowGrid(False)
         self.table.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
-        pagination = QHBoxLayout()
-        pagination.setSpacing(10)
-        page_size_label = QLabel("تعداد در صفحه:")
-        page_size_label.setObjectName("driversPageSizeLabel")
+        pagination_wrap = QFrame()
+        pagination_wrap.setObjectName("driversTableFooter")
+        pagination_wrap.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        pagination = QHBoxLayout(pagination_wrap)
+        pagination.setContentsMargins(4, 10, 4, 2)
+        pagination.setSpacing(12)
+
+        page_size_row = QHBoxLayout()
+        page_size_row.setDirection(QHBoxLayout.Direction.LeftToRight)
+        page_size_row.setSpacing(8)
+        show_prefix_label = QLabel("نمایش")
+        show_prefix_label.setObjectName("driversPageSizeLabel")
+        show_suffix_label = QLabel("مورد در هر صفحه")
+        show_suffix_label.setObjectName("driversPageSizeLabel")
         self.page_size_combo = NoWheelComboBox()
         self.page_size_combo.setObjectName("driversPageSizeCombo")
         self.page_size_combo.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
@@ -457,28 +468,43 @@ class DriversPage(Page):
             self.page_size_combo.addItem(to_persian_digits(size), size)
         self.page_size_combo.setCurrentIndex(0)
         self.page_size_combo.currentIndexChanged.connect(self._on_page_size_changed)
-        self.prev_page_button = QPushButton("قبلی")
-        self.prev_page_button.setObjectName("driversPageButton")
+        page_size_row.addWidget(show_prefix_label)
+        page_size_row.addWidget(self.page_size_combo)
+        page_size_row.addWidget(show_suffix_label)
+
+        nav_row = QHBoxLayout()
+        nav_row.setDirection(QHBoxLayout.Direction.LeftToRight)
+        nav_row.setSpacing(6)
+        self.range_info_label = QLabel()
+        self.range_info_label.setObjectName("driversPageRangeInfo")
+        self.range_info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.prev_page_button = QPushButton("‹")
+        self.prev_page_button.setObjectName("driversPageNavButton")
         self.prev_page_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.prev_page_button.setFixedSize(32, 32)
         self.prev_page_button.clicked.connect(self._go_prev_page)
-        self.next_page_button = QPushButton("بعدی")
-        self.next_page_button.setObjectName("driversPageButton")
+        self.page_number_label = QLabel(to_persian_digits(1))
+        self.page_number_label.setObjectName("driversPageNumber")
+        self.page_number_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.page_number_label.setFixedSize(32, 32)
+        self.next_page_button = QPushButton("›")
+        self.next_page_button.setObjectName("driversPageNavButton")
         self.next_page_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.next_page_button.setFixedSize(32, 32)
         self.next_page_button.clicked.connect(self._go_next_page)
-        self.page_info_label = QLabel()
-        self.page_info_label.setObjectName("driversPageInfo")
-        self.page_info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        pagination.addWidget(page_size_label)
-        pagination.addWidget(self.page_size_combo)
+        nav_row.addWidget(self.range_info_label)
+        nav_row.addWidget(self.prev_page_button)
+        nav_row.addWidget(self.page_number_label)
+        nav_row.addWidget(self.next_page_button)
+
+        pagination.addLayout(nav_row)
         pagination.addStretch(1)
-        pagination.addWidget(self.prev_page_button)
-        pagination.addWidget(self.page_info_label)
-        pagination.addWidget(self.next_page_button)
+        pagination.addLayout(page_size_row)
 
         layout.addWidget(header)
         body.addLayout(toolbar)
         body.addWidget(self.table, stretch=1)
-        body.addLayout(pagination)
+        body.addWidget(pagination_wrap)
         layout.addWidget(wrap, stretch=1)
         return card
 
@@ -577,28 +603,37 @@ class DriversPage(Page):
                 driver["last_name"],
                 to_persian_digits(driver["mobile"]),
                 driver["car_model"],
-                "فعال" if int(driver.get("is_active", 1)) else "غیرفعال",
             ]
             for col, value in enumerate(values, start=1):
                 item = QTableWidgetItem(str(value))
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                if col == 5:
-                    if int(driver.get("is_active", 1)):
-                        item.setForeground(Qt.GlobalColor.darkGreen)
-                    else:
-                        item.setForeground(Qt.GlobalColor.gray)
                 self.table.setItem(row, col, item)
+
+            status_holder = QFrame()
+            status_layout = QHBoxLayout(status_holder)
+            status_layout.setContentsMargins(0, 0, 0, 0)
+            status_layout.addWidget(
+                DriverStatusBadge(bool(int(driver.get("is_active", 1)))),
+                alignment=Qt.AlignmentFlag.AlignCenter,
+            )
+            self.table.setCellWidget(row, 5, status_holder)
         self._updating_checks = False
         self._update_pagination_controls()
 
     def _update_pagination_controls(self) -> None:
         total = len(self.drivers_cache)
         total_pages = self._drivers_total_pages()
-        current_page = self._drivers_page + 1
-        self.page_info_label.setText(
-            f"صفحه {to_persian_digits(current_page)} از {to_persian_digits(total_pages)} "
-            f"({to_persian_digits(total)} راننده)"
+        if total == 0:
+            range_start = 0
+            range_end = 0
+        else:
+            range_start = self._drivers_page * self._drivers_page_size + 1
+            range_end = min((self._drivers_page + 1) * self._drivers_page_size, total)
+        self.range_info_label.setText(
+            f"{to_persian_digits(range_start)}-{to_persian_digits(range_end)} "
+            f"از {to_persian_digits(total)} مورد"
         )
+        self.page_number_label.setText(to_persian_digits(self._drivers_page + 1))
         self.prev_page_button.setEnabled(self._drivers_page > 0)
         self.next_page_button.setEnabled(self._drivers_page < total_pages - 1)
 
