@@ -5,7 +5,6 @@ import re
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QFrame,
-    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -95,7 +94,10 @@ class MissionFormWidget(QWidget):
         self.time_input = QLineEdit()
         self._prepare_input(self.time_input)
         self.time_input.setPlaceholderText("HH:MM")
-        layout.addWidget(self._two_field_row("تاریخ *", self.date_input, "ساعت *", self.time_input, 1, 1))
+        self.passengers_input = QLineEdit()
+        self._prepare_input(self.passengers_input)
+        self.passengers_input.setPlaceholderText("مثال: علی احمدی و رضا محمدی")
+        layout.addWidget(self._driver_profile_followup_row())
 
         self.origin_category_combo = NoWheelComboBox()
         self.origin_location_combo = NoWheelComboBox()
@@ -132,14 +134,10 @@ class MissionFormWidget(QWidget):
         self.distance_input.setRange(0, 1_000_000)
         self.distance_input.setDecimals(1)
         self.distance_input.setSuffix(" km")
-        self.passengers_input = QLineEdit()
-        self._prepare_input(self.passengers_input)
-        self.passengers_input.setPlaceholderText("مثال: علی احمدی و رضا محمدی")
         self.description_input = QPlainTextEdit()
         self._prepare_text_area(self.description_input)
         self.description_input.setFixedHeight(56)
         layout.addWidget(self._labeled_row("مسافت *", self.distance_input))
-        layout.addWidget(self._labeled_row("سرنشینان", self.passengers_input))
         layout.addWidget(self._labeled_row("توضیحات", self.description_input))
 
         buttons = QHBoxLayout()
@@ -155,6 +153,26 @@ class MissionFormWidget(QWidget):
         layout.addLayout(buttons)
 
         root.addWidget(container, alignment=Qt.AlignmentFlag.AlignHCenter)
+
+    def _driver_profile_followup_row(self) -> QWidget:
+        row = QWidget()
+        row.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        layout = QHBoxLayout(row)
+        layout.setDirection(QHBoxLayout.Direction.LeftToRight)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+        layout.addWidget(self._field_box("سرنشینان", self.passengers_input), stretch=65)
+
+        date_time_column = QWidget()
+        date_time_column.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        date_time_layout = QHBoxLayout(date_time_column)
+        date_time_layout.setDirection(QHBoxLayout.Direction.LeftToRight)
+        date_time_layout.setContentsMargins(0, 0, 0, 0)
+        date_time_layout.setSpacing(8)
+        date_time_layout.addWidget(self._field_box("ساعت *", self.time_input), stretch=1)
+        date_time_layout.addWidget(self._field_box("تاریخ *", self.date_input), stretch=1)
+        layout.addWidget(date_time_column, stretch=35)
+        return row
 
     def _section_group(self, title: str) -> QFrame:
         group = QFrame()
@@ -286,7 +304,7 @@ class MissionFormWidget(QWidget):
         combo.blockSignals(True)
         combo.clear()
         for category in self.db.list_categories():
-            combo.addItem(f"{to_persian_digits(category['sort_order'])} - {category['title']}", category["id"])
+            combo.addItem(category["title"], category["id"])
         index = combo.findData(current)
         if index >= 0:
             combo.setCurrentIndex(index)
@@ -323,13 +341,13 @@ class MissionFormWidget(QWidget):
         add_button = QPushButton("+")
         add_button.setObjectName("destinationActionButton")
         add_button.setProperty("role", "secondary")
-        add_button.setFixedSize(34, 34)
+        add_button.setFixedSize(24, 24)
         add_button.setCursor(Qt.CursorShape.PointingHandCursor)
         add_button.clicked.connect(lambda: self.add_destination_row())
         remove_button = QPushButton("×")
         remove_button.setObjectName("destinationActionButton")
         remove_button.setProperty("role", "danger")
-        remove_button.setFixedSize(34, 34)
+        remove_button.setFixedSize(24, 24)
         remove_button.setCursor(Qt.CursorShape.PointingHandCursor)
         remove_button.clicked.connect(lambda: self.remove_destination_row(row))
         category_combo.currentIndexChanged.connect(
@@ -345,12 +363,14 @@ class MissionFormWidget(QWidget):
             location_combo.setCurrentText(selected_location)
         actions = QWidget()
         actions.setObjectName("destinationActions")
-        actions_layout = QHBoxLayout(actions)
-        actions_layout.setDirection(QHBoxLayout.Direction.LeftToRight)
-        actions_layout.setContentsMargins(0, 0, 0, 0)
-        actions_layout.setSpacing(6)
-        actions_layout.addWidget(add_button)
-        actions_layout.addWidget(remove_button)
+        actions.setFixedWidth(28)
+        actions_layout = QVBoxLayout(actions)
+        actions_layout.setDirection(QVBoxLayout.Direction.TopToBottom)
+        actions_layout.setContentsMargins(0, 24, 0, 0)
+        actions_layout.setSpacing(4)
+        actions_layout.addWidget(add_button, alignment=Qt.AlignmentFlag.AlignHCenter)
+        actions_layout.addWidget(remove_button, alignment=Qt.AlignmentFlag.AlignHCenter)
+        actions_layout.addStretch(1)
         layout.addWidget(actions)
         layout.addWidget(self._field_box("نقطه مقصد *", location_combo), stretch=65)
         layout.addWidget(self._field_box("دسته‌بندی مقصد *", category_combo), stretch=35)
