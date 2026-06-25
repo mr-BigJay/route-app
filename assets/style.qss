@@ -908,6 +908,66 @@ QWidget#missionsPage QLabel#pageSubtitle {
     qproperty-alignment: AlignCenter;
 }
 
+QWidget#reportsPage QLabel#pageTitle,
+QWidget#reportsPage QLabel#pageSubtitle {
+    qproperty-alignment: AlignCenter;
+}
+
+QLabel#reportsFieldLabel {
+    color: #1E3A8A;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+QLineEdit#reportsFilterInput,
+QComboBox#reportsFilterInput {
+    background: #FFFFFF;
+    border: 1px solid #BFDBFE;
+    border-radius: 8px;
+    padding: 8px 10px;
+    min-height: 36px;
+    color: #0F172A;
+}
+
+QLineEdit#reportsFilterInput:focus,
+QComboBox#reportsFilterInput:focus {
+    border: 1px solid #2563EB;
+}
+
+QComboBox#reportsFilterInput::drop-down {
+    border: none;
+    width: 22px;
+}
+
+QPushButton#reportsActionButton {
+    min-height: 34px;
+    border-radius: 8px;
+    padding: 6px 16px;
+    font-weight: 600;
+}
+
+QPushButton#reportsActionButton[variant="primary"] {
+    background: #2563EB;
+    color: #FFFFFF;
+    border: 1px solid #1D4ED8;
+}
+
+QPushButton#reportsActionButton[variant="primary"]:hover {
+    background: #1D4ED8;
+    border: 1px solid #1E40AF;
+}
+
+QPushButton#reportsActionButton[variant="secondary"] {
+    background: #FFFFFF;
+    color: #2563EB;
+    border: 1px solid #BFDBFE;
+}
+
+QPushButton#reportsActionButton[variant="secondary"]:hover {
+    background: #EFF6FF;
+    border: 1px solid #93C5FD;
+}
+
 QFrame#missionsTableCard {
     background: #FFFFFF;
     border: 1px solid #BFDBFE;

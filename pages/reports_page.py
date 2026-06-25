@@ -6,10 +6,13 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
+    QFrame,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit,
+    QPushButton,
+    QSizePolicy,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -33,6 +36,7 @@ from ui.utils import (
 class ReportsPage(Page):
     def __init__(self, db: DatabaseManager) -> None:
         super().__init__("گزارشات", "گزارش‌گیری ساده و خروجی Excel")
+        self.setObjectName("reportsPage")
         self.db = db
         self.report_rows: list[dict] = []
         self.total_distance = 0.0
@@ -40,20 +44,71 @@ class ReportsPage(Page):
         self.root_layout.addWidget(self._filters_card())
         self.root_layout.addWidget(self._table_card(), stretch=1)
         self.root_layout.addWidget(self._totals_card())
+        self._center_page_header()
 
-    def _filters_card(self):
+    def _center_page_header(self) -> None:
+        header = self.root_layout.itemAt(0).widget()
+        if header is None:
+            return
+        layout = header.layout()
+        if layout is None:
+            return
+        for index in range(layout.count()):
+            item = layout.itemAt(index)
+            widget = item.widget()
+            if widget is not None:
+                widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                layout.setAlignment(widget, Qt.AlignmentFlag.AlignHCenter)
+
+    def _build_themed_card(self, title: str, subtitle: str) -> tuple[QFrame, QVBoxLayout]:
         card = self.card()
+        card.setObjectName("missionsTableCard")
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(18, 16, 18, 16)
-        layout.setSpacing(14)
-        title = QLabel("فیلتر گزارش")
-        title.setObjectName("sectionTitle")
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        header = QFrame()
+        header.setObjectName("missionsTableHeader")
+        header_layout = QVBoxLayout(header)
+        header_layout.setContentsMargins(18, 16, 18, 14)
+        header_layout.setSpacing(4)
+        title_label = QLabel(title)
+        title_label.setObjectName("missionsTableTitle")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        subtitle_label = QLabel(subtitle)
+        subtitle_label.setObjectName("missionsTableSubtitle")
+        subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        header_layout.addWidget(title_label)
+        header_layout.addWidget(subtitle_label)
+
+        wrap = QFrame()
+        wrap.setObjectName("missionsTableWrap")
+        body_layout = QVBoxLayout(wrap)
+        body_layout.setContentsMargins(14, 14, 14, 14)
+        body_layout.setSpacing(12)
+
+        layout.addWidget(header)
+        layout.addWidget(wrap, stretch=1)
+        return card, body_layout
+
+    def _style_filter_input(self, widget: QWidget) -> None:
+        widget.setObjectName("reportsFilterInput")
+        widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+
+    def _filters_card(self) -> QFrame:
+        card, layout = self._build_themed_card(
+            "فیلتر گزارش",
+            "بازه زمانی و راننده مورد نظر را انتخاب کنید",
+        )
 
         self.driver_combo = QComboBox()
-        self.driver_combo.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        self._style_filter_input(self.driver_combo)
         self.start_date_input = QLineEdit()
         self.end_date_input = QLineEdit()
         for date_input in [self.start_date_input, self.end_date_input]:
+            self._style_filter_input(date_input)
             date_input.setPlaceholderText("yyyy/mm/dd")
             date_input.setMaxLength(10)
             date_input.setAlignment(Qt.AlignmentFlag.AlignRight)
@@ -66,17 +121,25 @@ class ReportsPage(Page):
 
         buttons = QHBoxLayout()
         buttons.setDirection(QHBoxLayout.Direction.RightToLeft)
-        generate_button = self.action_button("نمایش گزارش")
-        export_button = self.action_button("خروجی Excel", "secondary")
+        buttons.setSpacing(10)
+        generate_button = self._reports_action_button("نمایش گزارش", "primary")
+        export_button = self._reports_action_button("خروجی Excel", "secondary")
         generate_button.clicked.connect(self.generate_report)
         export_button.clicked.connect(self.export_excel)
         buttons.addWidget(generate_button)
         buttons.addWidget(export_button)
+        buttons.addStretch(1)
 
-        layout.addWidget(title)
         layout.addLayout(filters_row)
         layout.addLayout(buttons)
         return card
+
+    def _reports_action_button(self, title: str, variant: str) -> QPushButton:
+        button = QPushButton(title)
+        button.setObjectName("reportsActionButton")
+        button.setProperty("variant", variant)
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        return button
 
     def _field_box(self, label: str, widget: QWidget) -> QWidget:
         box = QWidget()
@@ -85,7 +148,7 @@ class ReportsPage(Page):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
         label_widget = QLabel(label)
-        label_widget.setObjectName("fieldLabel")
+        label_widget.setObjectName("reportsFieldLabel")
         label_widget.setAlignment(Qt.AlignmentFlag.AlignRight)
         layout.addWidget(label_widget)
         layout.addWidget(widget)
@@ -98,12 +161,13 @@ class ReportsPage(Page):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
         title = QLabel("تاریخ گزارش")
-        title.setObjectName("fieldLabel")
+        title.setObjectName("reportsFieldLabel")
         title.setAlignment(Qt.AlignmentFlag.AlignRight)
         row = QHBoxLayout()
         row.setDirection(QHBoxLayout.Direction.RightToLeft)
         row.setSpacing(10)
         separator = QLabel("تا")
+        separator.setObjectName("reportsFieldLabel")
         separator.setAlignment(Qt.AlignmentFlag.AlignCenter)
         row.addWidget(self.start_date_input, stretch=1)
         row.addWidget(separator)
@@ -112,24 +176,27 @@ class ReportsPage(Page):
         layout.addLayout(row)
         return box
 
-    def _table_card(self):
-        card = self.card()
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(18, 16, 18, 16)
-        title = QLabel("نتایج گزارش")
-        title.setObjectName("sectionTitle")
+    def _table_card(self) -> QFrame:
+        card, layout = self._build_themed_card(
+            "نتایج گزارش",
+            "ماموریت‌های فیلترشده در بازه انتخاب‌شده",
+        )
         self.table = QTableWidget(0, 9)
+        self.table.setObjectName("missionsTable")
         self.table.setHorizontalHeaderLabels(
             ["ردیف", "تاریخ", "ساعت", "راننده", "خودرو", "مبدا", "مقصد نهایی", "مسافت", "حق‌الزحمه"]
         )
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.table.horizontalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
         self.table.verticalHeader().setVisible(False)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        layout.addWidget(title)
-        layout.addWidget(self.table)
+        self.table.setAlternatingRowColors(True)
+        self.table.setShowGrid(False)
+        self.table.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        layout.addWidget(self.table, stretch=1)
         return card
 
-    def _totals_card(self):
+    def _totals_card(self) -> QFrame:
         card = self.card()
         layout = QHBoxLayout(card)
         layout.setContentsMargins(18, 16, 18, 16)
