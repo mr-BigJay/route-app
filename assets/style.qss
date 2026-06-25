@@ -9,8 +9,68 @@ QWidget {
 }
 
 QFrame#sidebar {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #EFF6FF, stop:1 #F8FAFC);
+    border-left: 1px solid #BFDBFE;
+}
+
+QFrame#sidebarCard {
     background: #FFFFFF;
-    border-left: 1px solid #E2E8F0;
+    border: 1px solid #BFDBFE;
+    border-radius: 18px;
+}
+
+QFrame#sidebarHeader {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1E3A8A, stop:1 #2563EB);
+    border-top-left-radius: 17px;
+    border-top-right-radius: 17px;
+}
+
+QLabel#sidebarLogo {
+    color: #FFFFFF;
+    font-size: 24px;
+    font-weight: 800;
+    background: transparent;
+}
+
+QLabel#sidebarHeaderSubtitle,
+QLabel#sidebarHeaderNetwork {
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 11px;
+    font-weight: 600;
+    background: transparent;
+}
+
+QLabel#sidebarHeaderCity {
+    color: #FFFFFF;
+    font-size: 20px;
+    font-weight: 800;
+    background: transparent;
+    padding-top: 2px;
+}
+
+QFrame#sidebarNavWrap {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #F8FAFC, stop:1 #FFFFFF);
+    border-bottom-left-radius: 17px;
+    border-bottom-right-radius: 17px;
+}
+
+QFrame#sidebarDateCard {
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    border-radius: 14px;
+}
+
+QLabel#sidebarWeekdayLabel {
+    color: #1E3A8A;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+QLabel#sidebarDateLabel,
+QLabel#sidebarTimeLabel {
+    color: #2563EB;
+    font-size: 12px;
+    font-weight: 600;
 }
 
 QLabel#logo {
@@ -200,13 +260,15 @@ QPushButton {
 }
 
 QPushButton#navButton {
-    background: transparent;
+    background: #FFFFFF;
     color: #334155;
-    border: none;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
     text-align: center;
-    padding: 12px 10px;
-    min-width: 190px;
-    qproperty-iconSize: 24px 24px;
+    padding: 11px 12px;
+    min-height: 42px;
+    font-weight: 600;
+    qproperty-iconSize: 22px 22px;
 }
 
 QLabel#weekdayLabel {
@@ -225,12 +287,14 @@ QLabel#sidebarFooter {
 QPushButton#navButton:hover {
     background: #EFF6FF;
     color: #2563EB;
+    border-color: #BFDBFE;
 }
 
 QPushButton#navButton[active="true"] {
-    background: #DBEAFE;
-    color: #2563EB;
-    font-weight: 800;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1E3A8A, stop:1 #2563EB);
+    color: #FFFFFF;
+    border: 1px solid #2563EB;
+    font-weight: 700;
 }
 
 QPushButton#optionButton {
@@ -552,7 +616,11 @@ QLabel#statusCredits {
 }
 
 QWidget#dashboardPage {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #F8FAFC, stop:0.5 #EFF6FF, stop:1 #F8FAFC);
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #EFF6FF, stop:0.45 #F8FAFC, stop:1 #EFF6FF);
+}
+
+QWidget#dashboardContent {
+    background: transparent;
 }
 
 QPushButton#dashboardActionButton {
@@ -588,10 +656,8 @@ QFrame#dashboardTableCard {
 
 QTabWidget#dashboardTablesTabs::pane {
     border: none;
-    background: #FFFFFF;
-    border-bottom-left-radius: 17px;
-    border-bottom-right-radius: 17px;
-    top: -1px;
+    background: transparent;
+    top: 0px;
 }
 
 QTabWidget#dashboardTablesTabs QTabBar {
@@ -640,7 +706,32 @@ QFrame[dashboardHeader="true"] QLabel#dashboardTableTitle {
 QTableWidget#dashboardTable,
 QTableWidget#dashboardReservationsTable {
     border: none;
-    background: #FFFFFF;
+    background: transparent;
+    gridline-color: #E2E8F0;
+    alternate-background-color: #F8FAFC;
+    outline: none;
+}
+
+QTableWidget#dashboardTable QHeaderView::section,
+QTableWidget#dashboardReservationsTable QHeaderView::section {
+    background: #EFF6FF;
+    color: #1E3A8A;
+    border: none;
+    border-bottom: 1px solid #BFDBFE;
+    padding: 10px 8px;
+    font-weight: 700;
+}
+
+QTableWidget#dashboardTable::item,
+QTableWidget#dashboardReservationsTable::item {
+    padding: 10px 8px;
+    border-bottom: 1px solid #E2E8F0;
+}
+
+QTableWidget#dashboardTable::item:selected,
+QTableWidget#dashboardReservationsTable::item:selected {
+    background: #DBEAFE;
+    color: #1D4ED8;
 }
 
 QFrame#missionOverlay {
