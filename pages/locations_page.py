@@ -299,6 +299,10 @@ class LocationsPage(Page):
     def open_edit_modal(self) -> None:
         self._modal_mode = "edit"
         self._prepare_management_modal_from_tree()
+        if self.management_tabs.currentIndex() == 0 and self.category_pick_combo.count() == 0:
+            show_error(self, "دسته‌بندی قابل ویرایشی وجود ندارد. دسته‌بندی‌های پیش‌فرض قابل ویرایش نیستند.")
+            self._modal_mode = "register"
+            return
         self._apply_modal_mode()
         self._show_overlay(self.management_overlay)
 
@@ -387,8 +391,22 @@ class LocationsPage(Page):
 
         if is_delete:
             self.location_category_label.setText("انتخاب دسته‌بندی *")
-        elif is_register or is_edit:
+            self.category_title_label.setText("عنوان *")
+            self.location_title_label.setText("عنوان نقطه *")
+            self.category_title_input.setPlaceholderText("مثال: اورژانس")
+            self.location_title_input.setPlaceholderText("مثال: مرکز کلاچای")
+        elif is_edit:
+            self.location_category_label.setText("انتخاب دسته‌بندی *")
+            self.category_title_label.setText("عنوان جدید *")
+            self.location_title_label.setText("عنوان جدید *")
+            self.category_title_input.setPlaceholderText("عنوان جدید دسته‌بندی")
+            self.location_title_input.setPlaceholderText("عنوان جدید نقطه")
+        elif is_register:
             self.location_category_label.setText("دسته‌بندی *")
+            self.category_title_label.setText("عنوان *")
+            self.location_title_label.setText("عنوان نقطه *")
+            self.category_title_input.setPlaceholderText("مثال: اورژانس")
+            self.location_title_input.setPlaceholderText("مثال: مرکز کلاچای")
 
         if self._modal_mode == "register":
             self.modal_primary_button.setText("ثبت")
@@ -502,7 +520,7 @@ class LocationsPage(Page):
         self.category_pick_combo.blockSignals(True)
         self.category_pick_combo.clear()
         categories = self.db.list_categories()
-        if self._modal_mode == "delete":
+        if self._modal_mode in ("delete", "edit"):
             categories = [category for category in categories if not int(category.get("is_locked", 0))]
         for category in categories:
             label = f"{to_persian_digits(category['sort_order'])} - {category['title']}"
@@ -519,7 +537,7 @@ class LocationsPage(Page):
         self.location_pick_combo.blockSignals(True)
         self.location_pick_combo.clear()
         locations = self.db.list_locations()
-        if self._modal_mode == "delete":
+        if self._modal_mode in ("delete", "edit"):
             category_id = self.location_category_combo.currentData()
             if category_id is not None:
                 locations = [
@@ -529,10 +547,6 @@ class LocationsPage(Page):
                 ]
                 for location in locations:
                     self.location_pick_combo.addItem(location["title"], location["id"])
-        elif self._modal_mode == "edit":
-            for location in locations:
-                label = f"{location['category_title']} / {location['title']}"
-                self.location_pick_combo.addItem(label, location["id"])
         location_index = self.location_pick_combo.findData(current_location)
         if location_index >= 0:
             self.location_pick_combo.setCurrentIndex(location_index)
@@ -618,17 +632,28 @@ class LocationsPage(Page):
             show_error(self, "دسته‌بندی مورد نظر را از منو انتخاب کنید.")
             return
         category = self.db.get_category(int(category_id))
-        if category and int(category.get("is_locked", 0)):
-            show_error(self, "دسته‌بندی‌های ثابت قابل ویرایش نیستند.")
+        if not category:
+            show_error(self, "دسته‌بندی انتخاب‌شده یافت نشد.")
+            return
+        if int(category.get("is_locked", 0)):
+            show_error(self, "دسته‌بندی‌های پیش‌فرض (ستاد، بیمارستان، مرکز درمانی، خانه بهداشت) قابل ویرایش نیستند.")
             return
 
-        title = self.category_title_input.text().strip()
+        new_title = self.category_title_input.text().strip()
         sort_order = self.category_order_input.value()
-        if not title:
-            show_error(self, "عنوان دسته‌بندی را وارد کنید.")
+        if not new_title:
+            show_error(self, "عنوان جدید دسته‌بندی را وارد کنید.")
+            return
+        old_title = category["title"]
+        if not confirm(
+            self,
+            f"آیا از ویرایش دسته‌بندی «{old_title}» به «{new_title}» مطمئن هستید؟ "
+            "با تغییر دسته‌بندی، دسته‌بندی تمام نقاط زیرمجموعه نیز تغییر می‌کند و "
+            "ممکن است بر فرم‌های نرم‌افزار اثر بگذارد.",
+        ):
             return
         try:
-            self.db.update_category(int(category_id), title, sort_order)
+            self.db.update_category(int(category_id), new_title, sort_order)
             show_success(self, "دسته‌بندی ویرایش شد.")
             self.clear_category_form()
             self.close_management_overlay()
@@ -680,17 +705,27 @@ class LocationsPage(Page):
             show_error(self, f"ثبت نقطه انجام نشد: {exc}")
 
     def update_location(self) -> None:
-        location_id = self.location_pick_combo.currentData()
         category_id = self.location_category_combo.currentData()
-        title = self.location_title_input.text().strip()
+        location_id = self.location_pick_combo.currentData()
+        new_title = self.location_title_input.text().strip()
+        if category_id is None:
+            show_error(self, "دسته‌بندی مورد نظر را از منو انتخاب کنید.")
+            return
         if location_id is None:
             show_error(self, "نقطه مورد نظر را از منو انتخاب کنید.")
             return
-        if category_id is None or not title:
-            show_error(self, "دسته‌بندی و عنوان نقطه را وارد کنید.")
+        if not new_title:
+            show_error(self, "عنوان جدید نقطه را وارد کنید.")
+            return
+        location = self._get_location_by_id(int(location_id))
+        if not location:
+            show_error(self, "نقطه انتخاب‌شده یافت نشد.")
+            return
+        old_title = location["title"]
+        if not confirm(self, f"آیا از ویرایش نقطه «{old_title}» به «{new_title}» مطمئن هستید؟"):
             return
         try:
-            self.db.update_location(int(location_id), int(category_id), title)
+            self.db.update_location(int(location_id), int(category_id), new_title)
             show_success(self, "نقطه ویرایش شد.")
             self.clear_location_form()
             self.close_management_overlay()
@@ -737,8 +772,10 @@ class LocationsPage(Page):
             self.selected_location_id = int(data[1])
 
     def _on_location_category_changed(self) -> None:
-        if self._modal_mode == "delete":
+        if self._modal_mode in ("delete", "edit"):
             self._refresh_location_pick_combo()
+            if self._modal_mode == "edit":
+                self._on_location_pick_changed()
 
     def _on_category_pick_changed(self) -> None:
         if self._modal_mode != "edit":
