@@ -58,14 +58,30 @@ class MissionFormWidget(QWidget):
         container.setObjectName("missionFormContainer")
         container.setMaximumWidth(self.FORM_MAX_WIDTH)
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(4, 4, 4, 4)
-        layout.setSpacing(12)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
+        title_bar = QFrame()
+        title_bar.setObjectName("missionFormHeader")
+        title_layout = QVBoxLayout(title_bar)
+        title_layout.setContentsMargins(18, 16, 18, 14)
+        title_layout.setSpacing(4)
         self.form_title = QLabel("ثبت ماموریت جدید")
         self.form_title.setObjectName("missionFormTitle")
         self.form_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.form_title.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        layout.addWidget(self.form_title)
+        self.form_subtitle = QLabel("اطلاعات ماموریت را تکمیل کنید")
+        self.form_subtitle.setObjectName("missionFormSubtitle")
+        self.form_subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.form_subtitle.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        title_layout.addWidget(self.form_title)
+        title_layout.addWidget(self.form_subtitle)
+
+        form_body = QWidget()
+        form_body.setObjectName("missionFormBody")
+        body_layout = QVBoxLayout(form_body)
+        body_layout.setContentsMargins(14, 14, 14, 14)
+        body_layout.setSpacing(12)
 
         self.driver_combo = NoWheelComboBox()
         self._prepare_combo(self.driver_combo)
@@ -75,7 +91,7 @@ class MissionFormWidget(QWidget):
         self.driver_profile_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         self.driver_profile_label.setMinimumHeight(FORM_FIELD_HEIGHT)
         self.driver_profile_label.setMaximumHeight(FORM_FIELD_HEIGHT)
-        layout.addWidget(
+        body_layout.addWidget(
             self._two_field_row(
                 "راننده *",
                 self.driver_combo,
@@ -97,7 +113,7 @@ class MissionFormWidget(QWidget):
         self.passengers_input = QLineEdit()
         self._prepare_input(self.passengers_input)
         self.passengers_input.setPlaceholderText("مثال: علی احمدی و رضا محمدی")
-        layout.addWidget(self._driver_profile_followup_row())
+        body_layout.addWidget(self._driver_profile_followup_row())
 
         self.origin_category_combo = NoWheelComboBox()
         self.origin_location_combo = NoWheelComboBox()
@@ -118,7 +134,7 @@ class MissionFormWidget(QWidget):
                 65,
             )
         )
-        layout.addWidget(origin_group)
+        body_layout.addWidget(origin_group)
 
         destinations_group = self._section_group("مقصدها")
         destinations_layout = destinations_group.layout()
@@ -127,7 +143,7 @@ class MissionFormWidget(QWidget):
         self.destinations_container.setSpacing(6)
         self.destinations_container.setContentsMargins(0, 0, 0, 0)
         destinations_layout.addLayout(self.destinations_container)
-        layout.addWidget(destinations_group)
+        body_layout.addWidget(destinations_group)
 
         self.distance_input = NoWheelDoubleSpinBox()
         self._prepare_spin(self.distance_input)
@@ -137,8 +153,8 @@ class MissionFormWidget(QWidget):
         self.description_input = QPlainTextEdit()
         self._prepare_text_area(self.description_input)
         self.description_input.setFixedHeight(56)
-        layout.addWidget(self._labeled_row("مسافت *", self.distance_input))
-        layout.addWidget(self._labeled_row("توضیحات", self.description_input))
+        body_layout.addWidget(self._labeled_row("مسافت *", self.distance_input))
+        body_layout.addWidget(self._labeled_row("توضیحات", self.description_input))
 
         buttons = QHBoxLayout()
         buttons.setSpacing(10)
@@ -150,7 +166,10 @@ class MissionFormWidget(QWidget):
         buttons.addWidget(self.save_button)
         buttons.addWidget(back_button)
         buttons.addStretch(1)
-        layout.addLayout(buttons)
+        body_layout.addLayout(buttons)
+
+        layout.addWidget(title_bar)
+        layout.addWidget(form_body)
 
         root.addWidget(container, alignment=Qt.AlignmentFlag.AlignHCenter)
 
