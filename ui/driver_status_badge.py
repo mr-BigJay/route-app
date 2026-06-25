@@ -8,24 +8,30 @@ class DriverStatusBadge(QWidget):
     def __init__(self, is_active: bool, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setFixedHeight(26)
 
+        active_value = "true" if is_active else "false"
         badge = QFrame()
         badge.setObjectName("driverStatusBadge")
-        badge.setProperty("active", "true" if is_active else "false")
+        badge.setProperty("active", active_value)
+        badge.setFixedHeight(24)
 
         layout = QHBoxLayout(badge)
-        layout.setContentsMargins(10, 4, 10, 4)
+        layout.setContentsMargins(8, 0, 8, 0)
         layout.setSpacing(6)
 
-        dot = QLabel()
+        dot = QFrame()
         dot.setObjectName("driverStatusDot")
-        dot.setProperty("active", "true" if is_active else "false")
+        dot.setProperty("active", active_value)
         dot.setFixedSize(8, 8)
+        dot.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
         label = QLabel("فعال" if is_active else "غیرفعال")
         label.setObjectName("driverStatusText")
-        label.setProperty("active", "true" if is_active else "false")
+        label.setProperty("active", active_value)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
         layout.addWidget(dot, alignment=Qt.AlignmentFlag.AlignVCenter)
         layout.addWidget(label, alignment=Qt.AlignmentFlag.AlignVCenter)
@@ -33,4 +39,7 @@ class DriverStatusBadge(QWidget):
         outer = QHBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
         outer.addWidget(badge, alignment=Qt.AlignmentFlag.AlignCenter)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+
+        for widget in (badge, dot, label):
+            widget.style().unpolish(widget)
+            widget.style().polish(widget)

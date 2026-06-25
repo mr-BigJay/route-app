@@ -398,12 +398,12 @@ class DriversPage(Page):
         body.setSpacing(12)
 
         toolbar = QHBoxLayout()
-        toolbar.setSpacing(8)
-        back_button = self.action_button("بازگشت", "ghost")
+        toolbar.setSpacing(6)
+        back_button = self._driver_list_button("بازگشت", "back")
         back_button.clicked.connect(self.back_to_options)
         profile_button = self._driver_list_button("مشاهده پروفایل", "profile")
         edit_button = self._driver_list_button("ویرایش", "edit")
-        delete_button = self.action_button("حذف", "danger")
+        delete_button = self._driver_list_button("حذف", "delete")
         active_button = self._driver_list_button("فعالسازی", "activate")
         inactive_button = self._driver_list_button("غیرفعالسازی", "deactivate")
         self.report_button = self._driver_list_button("گزارش از لیست", "report")
@@ -441,6 +441,7 @@ class DriversPage(Page):
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         self.table.horizontalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
         self.table.verticalHeader().setVisible(False)
+        self.table.verticalHeader().setDefaultSectionSize(44)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.setAlternatingRowColors(True)
@@ -610,6 +611,7 @@ class DriversPage(Page):
                 self.table.setItem(row, col, item)
 
             status_holder = QFrame()
+            status_holder.setMinimumHeight(28)
             status_layout = QHBoxLayout(status_holder)
             status_layout.setContentsMargins(0, 0, 0, 0)
             status_layout.addWidget(
@@ -617,6 +619,7 @@ class DriversPage(Page):
                 alignment=Qt.AlignmentFlag.AlignCenter,
             )
             self.table.setCellWidget(row, 5, status_holder)
+            self.table.setRowHeight(row, 44)
         self._updating_checks = False
         self._update_pagination_controls()
 

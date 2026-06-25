@@ -974,10 +974,34 @@ QTableWidget#missionsTable::item:hover {
 }
 
 QPushButton#driverListButton {
-    min-height: 34px;
-    border-radius: 9px;
-    padding: 6px 14px;
+    min-height: 0;
+    max-height: 28px;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
     font-weight: 600;
+}
+
+QPushButton#driverListButton[variant="back"] {
+    background: #FFFFFF;
+    color: #475569;
+    border: 1px solid #E2E8F0;
+}
+
+QPushButton#driverListButton[variant="back"]:hover {
+    background: #F8FAFC;
+    border: 1px solid #CBD5E1;
+}
+
+QPushButton#driverListButton[variant="delete"] {
+    background: #FEF2F2;
+    color: #DC2626;
+    border: 1px solid #FECACA;
+}
+
+QPushButton#driverListButton[variant="delete"]:hover {
+    background: #FEE2E2;
+    border: 1px solid #FCA5A5;
 }
 
 QPushButton#driverListButton[variant="profile"],
@@ -1102,36 +1126,46 @@ QFrame#driverStatusBadge[active="false"] {
     border-radius: 6px;
 }
 
-QLabel#driverStatusDot[active="true"] {
+QFrame#driverStatusDot[active="true"] {
     background: #2E7D32;
+    border: none;
     border-radius: 4px;
     min-width: 8px;
     max-width: 8px;
     min-height: 8px;
     max-height: 8px;
+    padding: 0;
+    margin: 0;
 }
 
-QLabel#driverStatusDot[active="false"] {
+QFrame#driverStatusDot[active="false"] {
     background: #9CA3AF;
+    border: none;
     border-radius: 4px;
     min-width: 8px;
     max-width: 8px;
     min-height: 8px;
     max-height: 8px;
+    padding: 0;
+    margin: 0;
 }
 
 QLabel#driverStatusText[active="true"] {
     color: #2E7D32;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     background: transparent;
+    padding: 0;
+    margin: 0;
 }
 
 QLabel#driverStatusText[active="false"] {
     color: #6B7280;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     background: transparent;
+    padding: 0;
+    margin: 0;
 }
 
 QPushButton#locationPageButton {
