@@ -812,6 +812,76 @@ QWidget#locationsPage QLabel#pageSubtitle {
     qproperty-alignment: AlignCenter;
 }
 
+QWidget#missionsPage QLabel#pageTitle,
+QWidget#missionsPage QLabel#pageSubtitle {
+    qproperty-alignment: AlignCenter;
+}
+
+QFrame#missionsTableCard {
+    background: #FFFFFF;
+    border: 1px solid #BFDBFE;
+    border-radius: 18px;
+}
+
+QFrame#missionsTableHeader {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1E3A8A, stop:1 #2563EB);
+    border-top-left-radius: 17px;
+    border-top-right-radius: 17px;
+}
+
+QLabel#missionsTableTitle {
+    color: #FFFFFF;
+    font-size: 17px;
+    font-weight: 800;
+    background: transparent;
+    qproperty-alignment: AlignCenter;
+}
+
+QLabel#missionsTableSubtitle {
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 12px;
+    font-weight: 600;
+    background: transparent;
+    qproperty-alignment: AlignCenter;
+}
+
+QFrame#missionsTableWrap {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #F8FAFC, stop:1 #FFFFFF);
+    border-bottom-left-radius: 17px;
+    border-bottom-right-radius: 17px;
+}
+
+QTableWidget#missionsTable {
+    background: transparent;
+    border: none;
+    gridline-color: #E2E8F0;
+    alternate-background-color: #F8FAFC;
+    outline: none;
+}
+
+QTableWidget#missionsTable QHeaderView::section {
+    background: #EFF6FF;
+    color: #1E3A8A;
+    border: none;
+    border-bottom: 1px solid #BFDBFE;
+    padding: 10px 8px;
+    font-weight: 700;
+}
+
+QTableWidget#missionsTable::item {
+    padding: 10px 8px;
+    border-bottom: 1px solid #E2E8F0;
+}
+
+QTableWidget#missionsTable::item:selected {
+    background: #DBEAFE;
+    color: #1D4ED8;
+}
+
+QTableWidget#missionsTable::item:hover {
+    background: #F8FAFC;
+}
+
 QPushButton#locationPageButton {
     background: #FFFFFF;
     color: #1E3A8A;

@@ -44,6 +44,7 @@ class MissionsPage(Page):
 
     def __init__(self, db: DatabaseManager) -> None:
         super().__init__("ماموریت‌ها", "ثبت و مدیریت ماموریت خودروهای سازمانی")
+        self.setObjectName("missionsPage")
         self.db = db
         self.missions_cache: list[dict] = []
 
@@ -52,6 +53,21 @@ class MissionsPage(Page):
         self.stack.addWidget(self._build_form_view())
         self.stack.addWidget(self._build_list_view())
         self.root_layout.addWidget(self.stack, stretch=1)
+        self._center_page_header()
+
+    def _center_page_header(self) -> None:
+        header = self.root_layout.itemAt(0).widget()
+        if header is None:
+            return
+        layout = header.layout()
+        if layout is None:
+            return
+        for index in range(layout.count()):
+            item = layout.itemAt(index)
+            widget = item.widget()
+            if widget is not None:
+                widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                layout.setAlignment(widget, Qt.AlignmentFlag.AlignHCenter)
 
     def _build_home_view(self) -> QWidget:
         page = QWidget()
@@ -75,18 +91,15 @@ class MissionsPage(Page):
         options_layout.addWidget(list_button)
         layout.addWidget(options_card)
 
-        today_card = self.card()
-        today_layout = QVBoxLayout(today_card)
-        today_layout.setContentsMargins(18, 16, 18, 16)
-        title = QLabel("لیست ماموریت‌های امروز")
-        title.setObjectName("sectionTitle")
-        self.today_table = QTableWidget(0, 7)
-        self.today_table.setHorizontalHeaderLabels(
-            ["ردیف", "ساعت", "راننده", "خودرو", "مبدا", "مقصد", "مسافت"]
+        today_card, today_body = self._build_mission_table_card(
+            "لیست ماموریت‌های امروز",
+            "ماموریت‌های ثبت‌شده برای امروز",
         )
-        self._setup_table(self.today_table)
-        today_layout.addWidget(title)
-        today_layout.addWidget(self.today_table)
+        self.today_table = self._create_mission_table(
+            7,
+            ["ردیف", "ساعت", "راننده", "خودرو", "مبدا", "مقصد", "مسافت"],
+        )
+        today_body.addWidget(self.today_table, stretch=1)
         layout.addWidget(today_card, stretch=1)
         return page
 
@@ -124,48 +137,87 @@ class MissionsPage(Page):
         return scroll
 
     def _build_list_view(self) -> QWidget:
-        card = self.card()
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(18, 16, 18, 16)
-        layout.setSpacing(12)
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
-        header = QHBoxLayout()
-        title = QLabel("لیست ماموریت‌ها")
-        title.setObjectName("sectionTitle")
-        back_button = self.action_button("بازگشت", "ghost")
-        back_button.clicked.connect(self.back_to_home)
-        header.addWidget(title)
-        header.addStretch(1)
-        header.addWidget(back_button)
+        card, body = self._build_mission_table_card(
+            "لیست ماموریت‌ها",
+            "مشاهده، ویرایش و گزارش‌گیری از ماموریت‌های ثبت‌شده",
+        )
 
         toolbar = QHBoxLayout()
+        toolbar.setSpacing(10)
+        back_button = self.action_button("بازگشت", "ghost")
+        back_button.clicked.connect(self.back_to_home)
         report_button = self.action_button("گزارش‌گیری", "secondary")
         edit_button = self.action_button("ویرایش", "secondary")
         delete_button = self.action_button("حذف", "danger")
         report_button.clicked.connect(self.report_missions)
         edit_button.clicked.connect(self.edit_selected_mission)
         delete_button.clicked.connect(self.delete_selected_mission)
+        toolbar.addWidget(back_button)
+        toolbar.addStretch(1)
         toolbar.addWidget(report_button)
         toolbar.addWidget(edit_button)
         toolbar.addWidget(delete_button)
-        toolbar.addStretch(1)
 
-        self.list_table = QTableWidget(0, 9)
-        self.list_table.setHorizontalHeaderLabels(
-            ["شناسه", "تاریخ", "ساعت", "راننده", "خودرو", "مبدا", "مقصد", "مسافت", "توضیحات"]
+        self.list_table = self._create_mission_table(
+            9,
+            ["شناسه", "تاریخ", "ساعت", "راننده", "خودرو", "مبدا", "مقصد", "مسافت", "توضیحات"],
         )
-        self._setup_table(self.list_table)
+        body.addLayout(toolbar)
+        body.addWidget(self.list_table, stretch=1)
+        layout.addWidget(card, stretch=1)
+        return page
 
-        layout.addLayout(header)
-        layout.addLayout(toolbar)
-        layout.addWidget(self.list_table)
-        return card
+    def _build_mission_table_card(self, title: str, subtitle: str) -> tuple[QFrame, QVBoxLayout]:
+        card = self.card()
+        card.setObjectName("missionsTableCard")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
-    def _setup_table(self, table: QTableWidget) -> None:
+        header = QFrame()
+        header.setObjectName("missionsTableHeader")
+        header_layout = QVBoxLayout(header)
+        header_layout.setContentsMargins(18, 16, 18, 14)
+        header_layout.setSpacing(4)
+        title_label = QLabel(title)
+        title_label.setObjectName("missionsTableTitle")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        subtitle_label = QLabel(subtitle)
+        subtitle_label.setObjectName("missionsTableSubtitle")
+        subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        header_layout.addWidget(title_label)
+        header_layout.addWidget(subtitle_label)
+
+        wrap = QFrame()
+        wrap.setObjectName("missionsTableWrap")
+        body_layout = QVBoxLayout(wrap)
+        body_layout.setContentsMargins(14, 14, 14, 14)
+        body_layout.setSpacing(12)
+
+        layout.addWidget(header)
+        layout.addWidget(wrap, stretch=1)
+        return card, body_layout
+
+    def _create_mission_table(self, column_count: int, headers: list[str]) -> QTableWidget:
+        table = QTableWidget(0, column_count)
+        table.setObjectName("missionsTable")
+        table.setHorizontalHeaderLabels(headers)
         table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        table.horizontalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
         table.verticalHeader().setVisible(False)
         table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        table.setAlternatingRowColors(True)
+        table.setShowGrid(False)
+        table.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        return table
 
     def refresh(self) -> None:
         self._refresh_home()
