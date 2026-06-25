@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QTextOption
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -270,7 +271,9 @@ class MissionFormWidget(QWidget):
         widget.setObjectName("missionFormInput")
         widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         widget.setAttribute(Qt.WidgetAttribute.WA_RightToLeft, True)
-        widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        text_option = widget.document().defaultTextOption()
+        text_option.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        widget.document().setDefaultTextOption(text_option)
         apply_form_field_font(widget)
 
     def _prepare_combo(self, combo: NoWheelComboBox) -> None:
