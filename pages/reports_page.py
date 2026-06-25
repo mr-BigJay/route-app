@@ -114,36 +114,38 @@ class ReportsPage(Page):
             date_input.setMaxLength(10)
             date_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        filters_container = QWidget()
-        filters_container.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
-        filters_row = QHBoxLayout(filters_container)
-        filters_row.setContentsMargins(0, 0, 0, 0)
-        filters_row.setSpacing(12)
-        filters_row.addWidget(
-            self._stacked_field("تاریخ انتها", self.end_date_input, centered=True, fixed_width=128),
-            stretch=1,
-        )
-        filters_row.addWidget(
-            self._stacked_field("تاریخ ابتدا", self.start_date_input, centered=True, fixed_width=128),
-            stretch=1,
-        )
-        filters_row.addWidget(
-            self._stacked_field("راننده", self.driver_combo, width_ratio=0.7),
-            stretch=3,
-        )
+        date_width = 128
+        driver_width = 196
+
+        fields_row = QHBoxLayout()
+        fields_row.setSpacing(16)
+        fields_row.setContentsMargins(0, 0, 0, 0)
+        fields_row.addWidget(self._stacked_field("تاریخ انتها", self.end_date_input, field_width=date_width))
+        fields_row.addWidget(self._stacked_field("تاریخ ابتدا", self.start_date_input, field_width=date_width))
+        fields_row.addWidget(self._stacked_field("راننده", self.driver_combo, field_width=driver_width))
+
+        fields_wrapper = QWidget()
+        fields_wrapper.setLayout(fields_row)
+
+        fields_center = QHBoxLayout()
+        fields_center.setContentsMargins(0, 0, 0, 0)
+        fields_center.addStretch(1)
+        fields_center.addWidget(fields_wrapper)
+        fields_center.addStretch(1)
 
         buttons = QHBoxLayout()
-        buttons.setDirection(QHBoxLayout.Direction.RightToLeft)
         buttons.setSpacing(10)
+        buttons.setContentsMargins(0, 0, 0, 0)
         generate_button = self._reports_action_button("نمایش گزارش", "primary")
         export_button = self._reports_action_button("خروجی Excel", "secondary")
         generate_button.clicked.connect(self.generate_report)
         export_button.clicked.connect(self.export_excel)
+        buttons.addStretch(1)
         buttons.addWidget(generate_button)
         buttons.addWidget(export_button)
         buttons.addStretch(1)
 
-        layout.addWidget(filters_container)
+        layout.addLayout(fields_center)
         layout.addLayout(buttons)
         return card
 
@@ -154,55 +156,25 @@ class ReportsPage(Page):
         button.setCursor(Qt.CursorShape.PointingHandCursor)
         return button
 
-    def _stacked_field(
-        self,
-        label: str,
-        widget: QWidget,
-        *,
-        centered: bool = False,
-        fixed_width: int | None = None,
-        width_ratio: float | None = None,
-    ) -> QWidget:
+    def _stacked_field(self, label: str, widget: QWidget, *, field_width: int) -> QWidget:
         box = QWidget()
         box.setObjectName("reportsFilterField")
-        box.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        box.setFixedWidth(field_width)
         layout = QVBoxLayout(box)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
+        layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
 
         label_widget = QLabel(label)
         label_widget.setObjectName("reportsFieldLabel")
-        label_widget.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        layout.addWidget(label_widget)
+        label_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        label_widget.setFixedWidth(field_width)
 
-        input_row = QWidget()
-        input_layout = QHBoxLayout(input_row)
-        input_layout.setContentsMargins(0, 0, 0, 0)
-        input_layout.setSpacing(0)
+        widget.setFixedWidth(field_width)
+        widget.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
-        if fixed_width is not None:
-            widget.setFixedWidth(fixed_width)
-            widget.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-
-        if centered:
-            input_layout.addStretch(1)
-            input_layout.addWidget(widget, 0, Qt.AlignmentFlag.AlignHCenter)
-            input_layout.addStretch(1)
-        elif width_ratio is not None:
-            widget.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-
-            def resize_event(event, field_box=box, target=widget, ratio=width_ratio) -> None:
-                QWidget.resizeEvent(field_box, event)
-                target.setFixedWidth(max(96, int(field_box.width() * ratio)))
-
-            box.resizeEvent = resize_event  # type: ignore[method-assign]
-            input_layout.addStretch(1)
-            input_layout.addWidget(widget, 0, Qt.AlignmentFlag.AlignRight)
-        else:
-            widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-            input_layout.addWidget(widget)
-
-        layout.addWidget(input_row)
+        layout.addWidget(label_widget, alignment=Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(widget, alignment=Qt.AlignmentFlag.AlignHCenter)
         return box
 
     def _table_card(self) -> QFrame:
