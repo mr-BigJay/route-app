@@ -240,8 +240,10 @@ class LocationsPage(Page):
         self.category_title_input.setPlaceholderText("مثال: اورژانس")
         self.category_title_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
         form.addRow(self.category_pick_label, self.category_pick_combo)
-        form.addRow("شماره ترتیب *", self.category_order_input)
-        form.addRow("عنوان *", self.category_title_input)
+        self.category_order_label = QLabel("شماره ترتیب *")
+        form.addRow(self.category_order_label, self.category_order_input)
+        self.category_title_label = QLabel("عنوان *")
+        form.addRow(self.category_title_label, self.category_title_input)
         layout.addLayout(form)
         layout.addStretch(1)
         return tab
@@ -258,14 +260,17 @@ class LocationsPage(Page):
         self.location_pick_combo = NoWheelComboBox()
         self.location_pick_combo.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.location_pick_combo.currentIndexChanged.connect(self._on_location_pick_changed)
+        self.location_category_label = QLabel("انتخاب دسته‌بندی *")
         self.location_category_combo = NoWheelComboBox()
         self.location_category_combo.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        self.location_category_combo.currentIndexChanged.connect(self._on_location_category_changed)
+        self.location_title_label = QLabel("عنوان نقطه *")
         self.location_title_input = QLineEdit()
         self.location_title_input.setPlaceholderText("مثال: مرکز کلاچای")
         self.location_title_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        form.addRow(self.location_category_label, self.location_category_combo)
         form.addRow(self.location_pick_label, self.location_pick_combo)
-        form.addRow("دسته‌بندی *", self.location_category_combo)
-        form.addRow("عنوان نقطه *", self.location_title_input)
+        form.addRow(self.location_title_label, self.location_title_input)
         layout.addLayout(form)
         layout.addStretch(1)
         return tab
@@ -300,6 +305,10 @@ class LocationsPage(Page):
     def open_delete_modal(self) -> None:
         self._modal_mode = "delete"
         self._prepare_management_modal_from_tree()
+        if self.management_tabs.currentIndex() == 0 and self.category_pick_combo.count() == 0:
+            show_error(self, "دسته‌بندی قابل حذفی وجود ندارد. دسته‌بندی‌های پیش‌فرض قابل حذف نیستند.")
+            self._modal_mode = "register"
+            return
         self._apply_modal_mode()
         self._show_overlay(self.management_overlay)
 
@@ -322,6 +331,12 @@ class LocationsPage(Page):
 
         if preset_location_id is not None:
             self.management_tabs.setCurrentIndex(1)
+            location = self._get_location_by_id(preset_location_id)
+            if location is not None:
+                category_index = self.location_category_combo.findData(int(location["category_id"]))
+                if category_index >= 0:
+                    self.location_category_combo.setCurrentIndex(category_index)
+            self._refresh_location_pick_combo()
             index = self.location_pick_combo.findData(preset_location_id)
             if index >= 0:
                 self.location_pick_combo.setCurrentIndex(index)
@@ -356,10 +371,24 @@ class LocationsPage(Page):
         self.modal_warning.setVisible(is_edit or is_delete)
         self._update_modal_title()
 
-        self.category_pick_label.setVisible(not is_register)
-        self.category_pick_combo.setVisible(not is_register)
-        self.location_pick_label.setVisible(not is_register)
-        self.location_pick_combo.setVisible(not is_register)
+        self.category_pick_label.setVisible(is_edit or is_delete)
+        self.category_pick_combo.setVisible(is_edit or is_delete)
+        self.category_order_label.setVisible(is_register or is_edit)
+        self.category_order_input.setVisible(is_register or is_edit)
+        self.category_title_label.setVisible(is_register or is_edit)
+        self.category_title_input.setVisible(is_register or is_edit)
+
+        self.location_category_label.setVisible(True)
+        self.location_category_combo.setVisible(True)
+        self.location_pick_label.setVisible(is_edit or is_delete)
+        self.location_pick_combo.setVisible(is_edit or is_delete)
+        self.location_title_label.setVisible(is_register or is_edit)
+        self.location_title_input.setVisible(is_register or is_edit)
+
+        if is_delete:
+            self.location_category_label.setText("انتخاب دسته‌بندی *")
+        elif is_register or is_edit:
+            self.location_category_label.setText("دسته‌بندی *")
 
         if self._modal_mode == "register":
             self.modal_primary_button.setText("ثبت")
@@ -372,11 +401,11 @@ class LocationsPage(Page):
             self.modal_primary_button.setProperty("role", "danger")
 
         read_only = is_delete
-        self.category_pick_combo.setEnabled(not is_register)
-        self.location_pick_combo.setEnabled(not is_register)
+        self.category_pick_combo.setEnabled(is_edit or is_delete)
+        self.location_pick_combo.setEnabled(is_edit or is_delete)
         self.category_order_input.setReadOnly(read_only)
         self.category_title_input.setReadOnly(read_only)
-        self.location_category_combo.setEnabled(not read_only)
+        self.location_category_combo.setEnabled(not read_only or is_delete)
         self.location_title_input.setReadOnly(read_only)
 
         self.modal_primary_button.style().unpolish(self.modal_primary_button)
@@ -462,12 +491,20 @@ class LocationsPage(Page):
         self.location_category_combo.blockSignals(False)
 
     def _refresh_management_combos(self) -> None:
-        current_category = self.category_pick_combo.currentData()
-        current_location = self.location_pick_combo.currentData()
+        self._refresh_category_pick_combo()
+        self._refresh_location_pick_combo()
+        if self._modal_mode == "edit":
+            self._on_category_pick_changed()
+            self._on_location_pick_changed()
 
+    def _refresh_category_pick_combo(self) -> None:
+        current_category = self.category_pick_combo.currentData()
         self.category_pick_combo.blockSignals(True)
         self.category_pick_combo.clear()
-        for category in self.db.list_categories():
+        categories = self.db.list_categories()
+        if self._modal_mode == "delete":
+            categories = [category for category in categories if not int(category.get("is_locked", 0))]
+        for category in categories:
             label = f"{to_persian_digits(category['sort_order'])} - {category['title']}"
             self.category_pick_combo.addItem(label, category["id"])
         category_index = self.category_pick_combo.findData(current_category)
@@ -477,21 +514,31 @@ class LocationsPage(Page):
             self.category_pick_combo.setCurrentIndex(0)
         self.category_pick_combo.blockSignals(False)
 
+    def _refresh_location_pick_combo(self) -> None:
+        current_location = self.location_pick_combo.currentData()
         self.location_pick_combo.blockSignals(True)
         self.location_pick_combo.clear()
-        for location in self.db.list_locations():
-            label = f"{location['category_title']} / {location['title']}"
-            self.location_pick_combo.addItem(label, location["id"])
+        locations = self.db.list_locations()
+        if self._modal_mode == "delete":
+            category_id = self.location_category_combo.currentData()
+            if category_id is not None:
+                locations = [
+                    location
+                    for location in locations
+                    if int(location["category_id"]) == int(category_id)
+                ]
+                for location in locations:
+                    self.location_pick_combo.addItem(location["title"], location["id"])
+        elif self._modal_mode == "edit":
+            for location in locations:
+                label = f"{location['category_title']} / {location['title']}"
+                self.location_pick_combo.addItem(label, location["id"])
         location_index = self.location_pick_combo.findData(current_location)
         if location_index >= 0:
             self.location_pick_combo.setCurrentIndex(location_index)
         elif self.location_pick_combo.count():
             self.location_pick_combo.setCurrentIndex(0)
         self.location_pick_combo.blockSignals(False)
-
-        if self._modal_mode != "register":
-            self._on_category_pick_changed()
-            self._on_location_pick_changed()
 
     def _refresh_tree(self) -> None:
         expanded_ids: set[int] = set()
@@ -595,10 +642,17 @@ class LocationsPage(Page):
             show_error(self, "دسته‌بندی مورد نظر را از منو انتخاب کنید.")
             return
         category = self.db.get_category(int(category_id))
-        if category and int(category.get("is_locked", 0)):
-            show_error(self, "دسته‌بندی‌های ثابت غیرقابل حذف هستند.")
+        if not category:
+            show_error(self, "دسته‌بندی انتخاب‌شده یافت نشد.")
             return
-        if not confirm(self, "با حذف دسته‌بندی، نقاط زیرمجموعه نیز حذف می‌شوند. ماموریت‌های قبلی تغییر نمی‌کنند. ادامه می‌دهید؟"):
+        if int(category.get("is_locked", 0)):
+            show_error(self, "دسته‌بندی‌های پیش‌فرض (ستاد، بیمارستان، مرکز درمانی، خانه بهداشت) قابل حذف نیستند.")
+            return
+        category_title = category["title"]
+        if not confirm(
+            self,
+            f"آیا از حذف دسته‌بندی «{category_title}» مطمئن هستید؟ با حذف این مورد، تمام نقاط زیرمجموعه آن نیز حذف می‌شوند.",
+        ):
             return
         try:
             self.db.delete_category(int(category_id))
@@ -645,11 +699,16 @@ class LocationsPage(Page):
             show_error(self, f"ویرایش نقطه انجام نشد: {exc}")
 
     def delete_location(self) -> None:
+        category_id = self.location_category_combo.currentData()
         location_id = self.location_pick_combo.currentData()
+        if category_id is None:
+            show_error(self, "دسته‌بندی مورد نظر را از منو انتخاب کنید.")
+            return
         if location_id is None:
             show_error(self, "نقطه مورد نظر را از منو انتخاب کنید.")
             return
-        if not confirm(self, "آیا از حذف نقطه انتخاب‌شده مطمئن هستید؟ ماموریت‌های قبلی تغییر نمی‌کنند."):
+        location_title = self.location_pick_combo.currentText().strip()
+        if not confirm(self, f"آیا از حذف نقطه «{location_title}» مطمئن هستید؟"):
             return
         try:
             self.db.delete_location(int(location_id))
@@ -677,8 +736,12 @@ class LocationsPage(Page):
             self.selected_category_id = None
             self.selected_location_id = int(data[1])
 
+    def _on_location_category_changed(self) -> None:
+        if self._modal_mode == "delete":
+            self._refresh_location_pick_combo()
+
     def _on_category_pick_changed(self) -> None:
-        if self._modal_mode == "register":
+        if self._modal_mode != "edit":
             return
         category_id = self.category_pick_combo.currentData()
         if category_id is None:
@@ -690,21 +753,24 @@ class LocationsPage(Page):
         self.category_title_input.setText(category["title"])
 
     def _on_location_pick_changed(self) -> None:
-        if self._modal_mode == "register":
+        if self._modal_mode != "edit":
             return
         location_id = self.location_pick_combo.currentData()
         if location_id is None:
             return
-        location = next(
-            (item for item in self.db.list_locations() if int(item["id"]) == int(location_id)),
-            None,
-        )
+        location = self._get_location_by_id(int(location_id))
         if not location:
             return
         self.location_title_input.setText(location["title"])
         index = self.location_category_combo.findData(int(location["category_id"]))
         if index >= 0:
             self.location_category_combo.setCurrentIndex(index)
+
+    def _get_location_by_id(self, location_id: int) -> dict | None:
+        for location in self.db.list_locations():
+            if int(location["id"]) == int(location_id):
+                return location
+        return None
 
     def _preset_location_category(self, category_id: int) -> None:
         index = self.location_category_combo.findData(category_id)
