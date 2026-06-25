@@ -1096,19 +1096,24 @@ QWidget#locationQuickAdd {
 QLabel#locationQuickAddOrder {
     background: #EFF6FF;
     border: 1px solid #BFDBFE;
-    border-radius: 8px;
+    border-radius: 6px;
     color: #2563EB;
     font-weight: 600;
-    font-size: 11px;
+    font-size: 10px;
+    min-height: 0;
+    max-height: 22px;
+    padding: 0;
 }
 
 QLineEdit#locationQuickAddInput {
     background: #F8FAFC;
     border: 1px solid #E2E8F0;
     border-radius: 8px;
-    padding: 6px 10px;
+    padding: 2px 8px;
     color: #0F172A;
     font-size: 12px;
+    min-height: 0;
+    max-height: 28px;
 }
 
 QLineEdit#locationQuickAddInput:focus {
@@ -1116,12 +1121,22 @@ QLineEdit#locationQuickAddInput:focus {
     background: #FFFFFF;
 }
 
+QPushButton#locationQuickAddConfirm,
+QPushButton#locationQuickAddCancel {
+    min-height: 0;
+    max-height: 26px;
+    min-width: 26px;
+    max-width: 26px;
+    padding: 0;
+    margin: 0;
+}
+
 QPushButton#locationQuickAddConfirm {
     background: #DCFCE7;
     border: 1px solid #86EFAC;
-    border-radius: 8px;
+    border-radius: 6px;
     color: #15803D;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 700;
 }
 
@@ -1132,10 +1147,11 @@ QPushButton#locationQuickAddConfirm:hover {
 QPushButton#locationQuickAddCancel {
     background: #FEE2E2;
     border: 1px solid #FCA5A5;
-    border-radius: 8px;
+    border-radius: 6px;
     color: #B91C1C;
-    font-size: 18px;
+    font-size: 15px;
     font-weight: 700;
+    padding-bottom: 1px;
 }
 
 QPushButton#locationQuickAddCancel:hover {

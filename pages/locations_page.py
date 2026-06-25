@@ -53,6 +53,7 @@ class LocationsPage(Page):
         self.selected_location_id: int | None = None
         self._modal_mode = "register"
         self._quick_add_item: QTreeWidgetItem | None = None
+        self._quick_add_add_item: QTreeWidgetItem | None = None
         self._tree_icons = self._load_tree_icons()
 
         self.page_content = QWidget()
@@ -650,6 +651,8 @@ class LocationsPage(Page):
             ("quick_add_location", category_id, category_title, sort_order),
         )
         category_item.insertChild(category_item.indexOfChild(add_item), quick_item)
+        add_item.setHidden(True)
+        self._quick_add_add_item = add_item
 
         widget = LocationQuickAddWidget(sort_order, self.tree)
         widget.confirmed.connect(
@@ -673,12 +676,16 @@ class LocationsPage(Page):
         parent = self._quick_add_item.parent()
         if parent is not None:
             parent.removeChild(self._quick_add_item)
+        if self._quick_add_add_item is not None:
+            self._quick_add_add_item.setHidden(False)
+            self._quick_add_add_item = None
         self._quick_add_item = None
 
     def _confirm_quick_add_location(self, category_id: int, title: str, sort_order: int) -> None:
         try:
             self.db.add_location(category_id, title, sort_order)
             self._quick_add_item = None
+            self._quick_add_add_item = None
             self.refresh()
         except DatabaseError as exc:
             show_error(self, f"ثبت نقطه انجام نشد: {exc}")
