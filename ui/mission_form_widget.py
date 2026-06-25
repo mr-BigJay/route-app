@@ -37,7 +37,7 @@ class MissionFormWidget(QWidget):
     cancelled = Signal()
 
     MAX_DESTINATIONS = 10
-    FORM_MAX_WIDTH = 660
+    FORM_MAX_WIDTH = 740
 
     def __init__(self, db: DatabaseManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -126,12 +126,12 @@ class MissionFormWidget(QWidget):
         origin_layout = origin_group.layout()
         origin_layout.addWidget(
             self._two_field_row(
-                "دسته‌بندی مبدا *",
-                self.origin_category_combo,
                 "نقطه مبدا *",
                 self.origin_location_combo,
-                35,
+                "دسته‌بندی مبدا *",
+                self.origin_category_combo,
                 65,
+                35,
             )
         )
         body_layout.addWidget(origin_group)
@@ -188,8 +188,8 @@ class MissionFormWidget(QWidget):
         date_time_layout.setDirection(QHBoxLayout.Direction.LeftToRight)
         date_time_layout.setContentsMargins(0, 0, 0, 0)
         date_time_layout.setSpacing(8)
-        date_time_layout.addWidget(self._field_box("ساعت *", self.time_input), stretch=1)
-        date_time_layout.addWidget(self._field_box("تاریخ *", self.date_input), stretch=1)
+        date_time_layout.addWidget(self._field_box("ساعت *", self.time_input), stretch=2)
+        date_time_layout.addWidget(self._field_box("تاریخ *", self.date_input), stretch=3)
         layout.addWidget(date_time_column, stretch=35)
         return row
 
@@ -391,8 +391,8 @@ class MissionFormWidget(QWidget):
         actions_layout.addWidget(remove_button, alignment=Qt.AlignmentFlag.AlignHCenter)
         actions_layout.addStretch(1)
         layout.addWidget(actions)
-        layout.addWidget(self._field_box("نقطه مقصد *", location_combo), stretch=65)
         layout.addWidget(self._field_box("دسته‌بندی مقصد *", category_combo), stretch=35)
+        layout.addWidget(self._field_box("نقطه مقصد *", location_combo), stretch=65)
         self.destinations_container.addWidget(row)
         self.destination_rows.append((row, category_combo, location_combo))
         self._sync_destination_action_buttons()
