@@ -27,6 +27,8 @@ class NoWheelDoubleSpinBox(QDoubleSpinBox):
 def apply_form_field_font(widget: QWidget) -> None:
     font = widget.font()
     font.setPointSize(FORM_FIELD_FONT_SIZE)
+    font.setWeight(QFont.Weight.Normal)
+    font.setBold(False)
     widget.setFont(font)
 
 

@@ -90,6 +90,7 @@ class MissionFormWidget(QWidget):
         self.driver_combo.currentIndexChanged.connect(self._update_driver_profile)
         self.driver_profile_label = QLabel("پروفایل راننده و خودرو پس از انتخاب راننده نمایش داده می‌شود.")
         self.driver_profile_label.setObjectName("profileInfo")
+        apply_form_field_font(self.driver_profile_label)
         self.driver_profile_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.driver_profile_label.setMinimumHeight(FORM_FIELD_HEIGHT)
         self.driver_profile_label.setMaximumHeight(FORM_FIELD_HEIGHT)
@@ -214,8 +215,10 @@ class MissionFormWidget(QWidget):
 
     def _action_button(self, text: str, role: str) -> QPushButton:
         button = QPushButton(text)
+        button.setObjectName("missionFormActionButton")
         button.setCursor(Qt.CursorShape.PointingHandCursor)
         button.setProperty("role", role)
+        button.setFixedSize(132, 51)
         return button
 
     def _labeled_row(self, label: str, widget: QWidget) -> QWidget:
@@ -265,6 +268,7 @@ class MissionFormWidget(QWidget):
         if placeholder:
             widget.setPlaceholderText("")
             widget.setPlaceholderText(placeholder)
+        apply_form_field_font(widget)
         widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
     def _prepare_text_area(self, widget: QPlainTextEdit) -> None:
