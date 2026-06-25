@@ -120,7 +120,7 @@ class ReportsPage(Page):
         filters_row.setSpacing(12)
         filters_row.addWidget(self._inline_field("تاریخ انتها", self.end_date_input), stretch=1)
         filters_row.addWidget(self._inline_field("تاریخ ابتدا", self.start_date_input), stretch=1)
-        filters_row.addWidget(self._inline_field("راننده", self.driver_combo), stretch=1)
+        filters_row.addWidget(self._inline_field("راننده", self.driver_combo), stretch=3)
 
         buttons = QHBoxLayout()
         buttons.setDirection(QHBoxLayout.Direction.RightToLeft)
