@@ -302,20 +302,12 @@ class LocationsPage(Page):
     def open_edit_modal(self) -> None:
         self._modal_mode = "edit"
         self._prepare_management_modal_from_tree()
-        if self.management_tabs.currentIndex() == 0 and self.category_pick_combo.count() == 0:
-            show_error(self, "دسته‌بندی قابل ویرایشی وجود ندارد. دسته‌بندی‌های پیش‌فرض قابل ویرایش نیستند.")
-            self._modal_mode = "register"
-            return
         self._apply_modal_mode()
         self._show_overlay(self.management_overlay)
 
     def open_delete_modal(self) -> None:
         self._modal_mode = "delete"
         self._prepare_management_modal_from_tree()
-        if self.management_tabs.currentIndex() == 0 and self.category_pick_combo.count() == 0:
-            show_error(self, "دسته‌بندی قابل حذفی وجود ندارد. دسته‌بندی‌های پیش‌فرض قابل حذف نیستند.")
-            self._modal_mode = "register"
-            return
         self._apply_modal_mode()
         self._show_overlay(self.management_overlay)
 
@@ -348,16 +340,35 @@ class LocationsPage(Page):
             if index >= 0:
                 self.location_pick_combo.setCurrentIndex(index)
         elif preset_category_id is not None:
-            self.management_tabs.setCurrentIndex(0)
             index = self.category_pick_combo.findData(preset_category_id)
             if index >= 0:
+                self.management_tabs.setCurrentIndex(0)
                 self.category_pick_combo.setCurrentIndex(index)
+            elif self._modal_mode in ("edit", "delete"):
+                self._open_locations_tab_for_management(preset_category_id)
+            else:
+                self.management_tabs.setCurrentIndex(0)
         else:
-            self.management_tabs.setCurrentIndex(0)
-            if self.category_pick_combo.count():
-                self.category_pick_combo.setCurrentIndex(0)
-            if self.location_pick_combo.count():
-                self.location_pick_combo.setCurrentIndex(0)
+            if self._modal_mode in ("edit", "delete") and self.category_pick_combo.count() == 0:
+                self._open_locations_tab_for_management()
+            else:
+                self.management_tabs.setCurrentIndex(0)
+                if self.category_pick_combo.count():
+                    self.category_pick_combo.setCurrentIndex(0)
+                if self.location_pick_combo.count():
+                    self.location_pick_combo.setCurrentIndex(0)
+
+    def _open_locations_tab_for_management(self, category_id: int | None = None) -> None:
+        self.management_tabs.setCurrentIndex(1)
+        if category_id is not None:
+            category_index = self.location_category_combo.findData(category_id)
+            if category_index >= 0:
+                self.location_category_combo.setCurrentIndex(category_index)
+        elif self.location_category_combo.count():
+            self.location_category_combo.setCurrentIndex(0)
+        self._refresh_location_pick_combo()
+        if self.location_pick_combo.count():
+            self.location_pick_combo.setCurrentIndex(0)
 
     def _open_register_modal_for_category(self, category_id: int) -> None:
         self._modal_mode = "register"
