@@ -913,6 +913,34 @@ QWidget#reportsPage QLabel#pageSubtitle {
     qproperty-alignment: AlignCenter;
 }
 
+QFrame#reportsTotalCard {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 18px;
+}
+
+QLabel#reportsTotalTitle,
+QLabel#reportsTotalValue {
+    color: #0F172A;
+    background: transparent;
+    qproperty-alignment: AlignCenter;
+}
+
+QLabel#reportsTotalTitle {
+    font-size: 12px;
+    font-weight: 700;
+}
+
+QLabel#reportsTotalValue {
+    font-size: 28px;
+    font-weight: 800;
+}
+
+QFrame#reportsTotalBar {
+    background: #0F172A;
+    border-radius: 2px;
+}
+
 QLabel#reportsFieldLabel {
     color: #1E3A8A;
     font-size: 12px;

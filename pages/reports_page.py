@@ -21,11 +21,8 @@ from PySide6.QtWidgets import (
 
 from database.db import DatabaseManager
 from ui.utils import (
-    PRIMARY_COLOR,
-    SUCCESS_COLOR,
     Page,
     gregorian_to_jalali,
-    make_stat_card,
     show_error,
     show_success,
     to_english_digits,
@@ -194,13 +191,43 @@ class ReportsPage(Page):
         layout.addWidget(self.table, stretch=1)
         return card
 
+    def _report_total_card(self, title: str, value: str) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("reportsTotalCard")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(18, 16, 18, 16)
+        layout.setSpacing(8)
+        layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+
+        title_label = QLabel(title)
+        title_label.setObjectName("reportsTotalTitle")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        value_label = QLabel(to_persian_digits(value))
+        value_label.setObjectName("reportsTotalValue")
+        value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        bar = QFrame()
+        bar.setObjectName("reportsTotalBar")
+        bar.setFixedSize(96, 4)
+        bar_row = QHBoxLayout()
+        bar_row.setContentsMargins(0, 0, 0, 0)
+        bar_row.addStretch(1)
+        bar_row.addWidget(bar)
+        bar_row.addStretch(1)
+
+        layout.addWidget(title_label, alignment=Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(value_label, alignment=Qt.AlignmentFlag.AlignHCenter)
+        layout.addLayout(bar_row)
+        return frame
+
     def _totals_card(self) -> QFrame:
         card = self.card()
         layout = QHBoxLayout(card)
         layout.setContentsMargins(18, 16, 18, 16)
         layout.setSpacing(12)
-        self.distance_total_card = make_stat_card("مسافت کل", "۰.۰", PRIMARY_COLOR)
-        self.fee_total_card = make_stat_card("حق‌الزحمه راننده", "۰ ریال", SUCCESS_COLOR)
+        self.distance_total_card = self._report_total_card("مسافت کل", "۰.۰")
+        self.fee_total_card = self._report_total_card("حق‌الزحمه راننده", "۰ ریال")
         layout.addWidget(self.distance_total_card)
         layout.addWidget(self.fee_total_card)
         return card
@@ -284,8 +311,8 @@ class ReportsPage(Page):
         self.distance_total_card.deleteLater()
         self.fee_total_card.deleteLater()
         parent_layout = self.root_layout.itemAt(self.root_layout.count() - 1).widget().layout()
-        self.distance_total_card = make_stat_card("مسافت کل", to_persian_digits(f"{self.total_distance:.1f}"), PRIMARY_COLOR)
-        self.fee_total_card = make_stat_card("حق‌الزحمه راننده", self._format_rial(self.total_fee), SUCCESS_COLOR)
+        self.distance_total_card = self._report_total_card("مسافت کل", to_persian_digits(f"{self.total_distance:.1f}"))
+        self.fee_total_card = self._report_total_card("حق‌الزحمه راننده", self._format_rial(self.total_fee))
         parent_layout.addWidget(self.distance_total_card)
         parent_layout.addWidget(self.fee_total_card)
 
