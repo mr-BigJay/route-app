@@ -51,6 +51,8 @@ class DriversPage(Page):
         self._updating_checks = False
         self._formatting_birth_date = False
         self._formatting_distance_rate = False
+        self._drivers_page = 0
+        self._drivers_page_size = 10
 
         self.drivers_summary_card = self._build_drivers_summary()
         self.root_layout.addWidget(self.drivers_summary_card, alignment=Qt.AlignmentFlag.AlignHCenter)
@@ -358,35 +360,60 @@ class DriversPage(Page):
         if not is_rental:
             self.distance_rate_input.clear()
 
+    def _driver_list_button(self, title: str, variant: str) -> QPushButton:
+        button = QPushButton(title)
+        button.setObjectName("driverListButton")
+        button.setProperty("variant", variant)
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        return button
+
     def _build_list_view(self) -> QFrame:
         card = self.card()
+        card.setObjectName("missionsTableCard")
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(18, 16, 18, 16)
-        layout.setSpacing(12)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
-        header = QHBoxLayout()
+        header = QFrame()
+        header.setObjectName("missionsTableHeader")
+        header_layout = QVBoxLayout(header)
+        header_layout.setContentsMargins(18, 16, 18, 14)
+        header_layout.setSpacing(4)
         title = QLabel("لیست رانندگان")
-        title.setObjectName("sectionTitle")
-        back_button = self.action_button("بازگشت", "ghost")
-        back_button.clicked.connect(self.back_to_options)
-        header.addWidget(title)
-        header.addStretch(1)
-        header.addWidget(back_button)
+        title.setObjectName("missionsTableTitle")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        subtitle = QLabel("مشاهده، ویرایش و مدیریت رانندگان ثبت‌شده")
+        subtitle.setObjectName("missionsTableSubtitle")
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        header_layout.addWidget(title)
+        header_layout.addWidget(subtitle)
+
+        wrap = QFrame()
+        wrap.setObjectName("missionsTableWrap")
+        body = QVBoxLayout(wrap)
+        body.setContentsMargins(14, 14, 14, 14)
+        body.setSpacing(12)
 
         toolbar = QHBoxLayout()
         toolbar.setSpacing(8)
-        profile_button = self.action_button("مشاهده پروفایل راننده", "secondary")
-        edit_button = self.action_button("ویرایش", "secondary")
+        back_button = self.action_button("بازگشت", "ghost")
+        back_button.clicked.connect(self.back_to_options)
+        profile_button = self._driver_list_button("مشاهده پروفایل", "profile")
+        edit_button = self._driver_list_button("ویرایش", "edit")
         delete_button = self.action_button("حذف", "danger")
-        active_button = self.action_button("فعال", "secondary")
-        inactive_button = self.action_button("غیرفعال", "danger")
-        self.report_button = self.action_button("گزارش از لیست", "secondary")
+        active_button = self._driver_list_button("فعالسازی", "activate")
+        inactive_button = self._driver_list_button("غیرفعالسازی", "deactivate")
+        self.report_button = self._driver_list_button("گزارش از لیست", "report")
         profile_button.clicked.connect(self.show_selected_driver_profile)
         edit_button.clicked.connect(self.edit_selected_driver)
         delete_button.clicked.connect(self.delete_selected_drivers)
         active_button.clicked.connect(self.activate_selected_drivers)
         inactive_button.clicked.connect(self.deactivate_selected_drivers)
         self.report_button.clicked.connect(self.report_from_list)
+        toolbar.addWidget(back_button)
+        toolbar.addStretch(1)
         for button in [
             profile_button,
             edit_button,
@@ -396,9 +423,9 @@ class DriversPage(Page):
             self.report_button,
         ]:
             toolbar.addWidget(button)
-        toolbar.addStretch(1)
 
         self.table = QTableWidget(0, 6)
+        self.table.setObjectName("missionsTable")
         self.table.setHorizontalHeaderLabels(
             [
                 "انتخاب",
@@ -411,13 +438,48 @@ class DriversPage(Page):
         )
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        self.table.horizontalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
         self.table.verticalHeader().setVisible(False)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.table.setAlternatingRowColors(True)
+        self.table.setShowGrid(False)
+        self.table.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
-        layout.addLayout(header)
-        layout.addLayout(toolbar)
-        layout.addWidget(self.table)
+        pagination = QHBoxLayout()
+        pagination.setSpacing(10)
+        page_size_label = QLabel("تعداد در صفحه:")
+        page_size_label.setObjectName("driversPageSizeLabel")
+        self.page_size_combo = NoWheelComboBox()
+        self.page_size_combo.setObjectName("driversPageSizeCombo")
+        self.page_size_combo.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        for size in (10, 20, 50):
+            self.page_size_combo.addItem(to_persian_digits(size), size)
+        self.page_size_combo.setCurrentIndex(0)
+        self.page_size_combo.currentIndexChanged.connect(self._on_page_size_changed)
+        self.prev_page_button = QPushButton("قبلی")
+        self.prev_page_button.setObjectName("driversPageButton")
+        self.prev_page_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.prev_page_button.clicked.connect(self._go_prev_page)
+        self.next_page_button = QPushButton("بعدی")
+        self.next_page_button.setObjectName("driversPageButton")
+        self.next_page_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.next_page_button.clicked.connect(self._go_next_page)
+        self.page_info_label = QLabel()
+        self.page_info_label.setObjectName("driversPageInfo")
+        self.page_info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        pagination.addWidget(page_size_label)
+        pagination.addWidget(self.page_size_combo)
+        pagination.addStretch(1)
+        pagination.addWidget(self.prev_page_button)
+        pagination.addWidget(self.page_info_label)
+        pagination.addWidget(self.next_page_button)
+
+        layout.addWidget(header)
+        body.addLayout(toolbar)
+        body.addWidget(self.table, stretch=1)
+        body.addLayout(pagination)
+        layout.addWidget(wrap, stretch=1)
         return card
 
     def _build_profile_overlay(self) -> None:
@@ -477,12 +539,32 @@ class DriversPage(Page):
 
     def refresh_table(self) -> None:
         self._refresh_active_count()
-        self._updating_checks = True
         self.drivers_cache = self.db.list_drivers()
-        self.table.setRowCount(len(self.drivers_cache))
-        for row, driver in enumerate(self.drivers_cache):
+        self._clamp_drivers_page()
+        self._populate_table_page()
+
+    def _drivers_total_pages(self) -> int:
+        if not self.drivers_cache:
+            return 1
+        return max(1, (len(self.drivers_cache) + self._drivers_page_size - 1) // self._drivers_page_size)
+
+    def _clamp_drivers_page(self) -> None:
+        max_page = self._drivers_total_pages() - 1
+        if self._drivers_page > max_page:
+            self._drivers_page = max(0, max_page)
+
+    def _paginated_drivers(self) -> list[dict]:
+        start = self._drivers_page * self._drivers_page_size
+        end = start + self._drivers_page_size
+        return self.drivers_cache[start:end]
+
+    def _populate_table_page(self) -> None:
+        page_drivers = self._paginated_drivers()
+        self._updating_checks = True
+        self.table.setRowCount(len(page_drivers))
+        for row, driver in enumerate(page_drivers):
             checkbox = QCheckBox()
-            checkbox.setProperty("row", row)
+            checkbox.setProperty("driver_id", int(driver["id"]))
             checkbox.stateChanged.connect(self.on_driver_checked)
             checkbox_holder = QFrame()
             checkbox_layout = QHBoxLayout(checkbox_holder)
@@ -507,6 +589,36 @@ class DriversPage(Page):
                         item.setForeground(Qt.GlobalColor.gray)
                 self.table.setItem(row, col, item)
         self._updating_checks = False
+        self._update_pagination_controls()
+
+    def _update_pagination_controls(self) -> None:
+        total = len(self.drivers_cache)
+        total_pages = self._drivers_total_pages()
+        current_page = self._drivers_page + 1
+        self.page_info_label.setText(
+            f"صفحه {to_persian_digits(current_page)} از {to_persian_digits(total_pages)} "
+            f"({to_persian_digits(total)} راننده)"
+        )
+        self.prev_page_button.setEnabled(self._drivers_page > 0)
+        self.next_page_button.setEnabled(self._drivers_page < total_pages - 1)
+
+    def _on_page_size_changed(self, _index: int) -> None:
+        page_size = self.page_size_combo.currentData()
+        if page_size is None:
+            return
+        self._drivers_page_size = int(page_size)
+        self._drivers_page = 0
+        self._populate_table_page()
+
+    def _go_prev_page(self) -> None:
+        if self._drivers_page > 0:
+            self._drivers_page -= 1
+            self._populate_table_page()
+
+    def _go_next_page(self) -> None:
+        if self._drivers_page < self._drivers_total_pages() - 1:
+            self._drivers_page += 1
+            self._populate_table_page()
 
     def collect_form_data(self) -> dict | None:
         vehicle_status = self.vehicle_status_combo.currentText().strip()
@@ -773,10 +885,17 @@ class DriversPage(Page):
         show_success(self, "گزارش Excel رانندگان با موفقیت ذخیره شد.")
 
     def selected_drivers(self) -> list[dict]:
+        driver_map = {int(driver["id"]): driver for driver in self.drivers_cache}
         selected: list[dict] = []
-        for row, driver in enumerate(self.drivers_cache):
+        for row in range(self.table.rowCount()):
             checkbox = self._checkbox_at_row(row)
-            if checkbox and checkbox.isChecked():
+            if not checkbox or not checkbox.isChecked():
+                continue
+            driver_id = checkbox.property("driver_id")
+            if driver_id is None:
+                continue
+            driver = driver_map.get(int(driver_id))
+            if driver is not None:
                 selected.append(driver)
         return selected
 
@@ -786,15 +905,13 @@ class DriversPage(Page):
         sender = self.sender()
         if not isinstance(sender, QCheckBox):
             return
-        checked_row = int(sender.property("row"))
+        checked_driver_id = sender.property("driver_id")
         if self.report_selection_mode:
             return
         self._updating_checks = True
         for row in range(self.table.rowCount()):
-            if row == checked_row:
-                continue
             checkbox = self._checkbox_at_row(row)
-            if checkbox:
+            if checkbox and checkbox.property("driver_id") != checked_driver_id:
                 checkbox.setChecked(False)
         self._updating_checks = False
 
