@@ -516,17 +516,27 @@ class DatabaseManager:
             """
         )
 
-    def add_location(self, category_id: int, title: str) -> int:
-        return self.execute(
-            """
-            INSERT INTO locations (category_id, title, sort_order)
-            VALUES (
-                ?,
-                ?,
-                COALESCE((SELECT MAX(sort_order) + 1 FROM locations WHERE category_id = ?), 1)
+    def next_free_location_sort_order(self, category_id: int) -> int:
+        rows = self.fetch_all(
+            "SELECT sort_order FROM locations WHERE category_id = ? ORDER BY sort_order",
+            (category_id,),
+        )
+        used = {int(row["sort_order"]) for row in rows}
+        order = 1
+        while order in used:
+            order += 1
+        return order
+
+    def add_location(self, category_id: int, title: str, sort_order: int | None = None) -> int:
+        if sort_order is None:
+            row = self.fetch_one(
+                "SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM locations WHERE category_id = ?",
+                (category_id,),
             )
-            """,
-            (category_id, title.strip(), category_id),
+            sort_order = int(row["next_order"]) if row else 1
+        return self.execute(
+            "INSERT INTO locations (category_id, title, sort_order) VALUES (?, ?, ?)",
+            (category_id, title.strip(), sort_order),
         )
 
     def update_location(self, location_id: int, category_id: int, title: str) -> None:

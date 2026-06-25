@@ -1087,6 +1087,61 @@ QTreeWidget#locationsTree::item:hover {
     background: transparent;
 }
 
+QWidget#locationQuickAdd {
+    background: #FFFFFF;
+    border: 1px solid #93C5FD;
+    border-radius: 12px;
+}
+
+QLabel#locationQuickAddOrder {
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    border-radius: 8px;
+    color: #2563EB;
+    font-weight: 600;
+    font-size: 11px;
+}
+
+QLineEdit#locationQuickAddInput {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: #0F172A;
+    font-size: 12px;
+}
+
+QLineEdit#locationQuickAddInput:focus {
+    border-color: #93C5FD;
+    background: #FFFFFF;
+}
+
+QPushButton#locationQuickAddConfirm {
+    background: #DCFCE7;
+    border: 1px solid #86EFAC;
+    border-radius: 8px;
+    color: #15803D;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+QPushButton#locationQuickAddConfirm:hover {
+    background: #BBF7D0;
+}
+
+QPushButton#locationQuickAddCancel {
+    background: #FEE2E2;
+    border: 1px solid #FCA5A5;
+    border-radius: 8px;
+    color: #B91C1C;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+QPushButton#locationQuickAddCancel:hover {
+    background: #FECACA;
+}
+
 QFrame#formOverlay {
     background: rgba(15, 23, 42, 0.45);
 }

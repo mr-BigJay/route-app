@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 
 from database.db import DatabaseError, DatabaseManager
 from ui.form_widgets import NoWheelComboBox, NoWheelSpinBox
+from ui.location_quick_add_widget import LocationQuickAddWidget
 from ui.locations_tree_delegate import LocationsTreeDelegate
 from ui.utils import Page, confirm, make_stat_card, show_error, show_success, to_persian_digits
 
@@ -51,6 +52,7 @@ class LocationsPage(Page):
         self.selected_category_id: int | None = None
         self.selected_location_id: int | None = None
         self._modal_mode = "register"
+        self._quick_add_item: QTreeWidgetItem | None = None
         self._tree_icons = self._load_tree_icons()
 
         self.page_content = QWidget()
@@ -555,6 +557,8 @@ class LocationsPage(Page):
         self.location_pick_combo.blockSignals(False)
 
     def _refresh_tree(self) -> None:
+        self._cancel_quick_add_location()
+
         expanded_ids: set[int] = set()
         for index in range(self.tree.topLevelItemCount()):
             item = self.tree.topLevelItem(index)
@@ -603,10 +607,85 @@ class LocationsPage(Page):
         if not data:
             return
         if data[0] == "add_location":
-            self._open_register_modal_for_category(int(data[1]))
+            self._start_quick_add_location(int(data[1]))
+            return
+        if data[0] == "quick_add_location":
+            widget = self.tree.itemWidget(item, 0)
+            if isinstance(widget, LocationQuickAddWidget):
+                widget.focus_input()
             return
         if data[0] == "category":
             item.setExpanded(not item.isExpanded())
+
+    def _start_quick_add_location(self, category_id: int) -> None:
+        self._cancel_quick_add_location()
+
+        category_item: QTreeWidgetItem | None = None
+        add_item: QTreeWidgetItem | None = None
+        for index in range(self.tree.topLevelItemCount()):
+            item = self.tree.topLevelItem(index)
+            data = item.data(0, Qt.ItemDataRole.UserRole)
+            if not data or data[0] != "category" or int(data[1]) != category_id:
+                continue
+            category_item = item
+            for child_index in range(item.childCount()):
+                child = item.child(child_index)
+                child_data = child.data(0, Qt.ItemDataRole.UserRole)
+                if child_data and child_data[0] == "add_location":
+                    add_item = child
+                    break
+            break
+
+        if category_item is None or add_item is None:
+            return
+
+        category_data = category_item.data(0, Qt.ItemDataRole.UserRole)
+        category_title = str(category_data[3]) if category_data else ""
+        sort_order = self.db.next_free_location_sort_order(category_id)
+
+        quick_item = QTreeWidgetItem([""])
+        quick_item.setData(
+            0,
+            Qt.ItemDataRole.UserRole,
+            ("quick_add_location", category_id, category_title, sort_order),
+        )
+        category_item.insertChild(category_item.indexOfChild(add_item), quick_item)
+
+        widget = LocationQuickAddWidget(sort_order, self.tree)
+        widget.confirmed.connect(
+            lambda title, cid=category_id, order=sort_order: self._confirm_quick_add_location(
+                cid, title, order
+            )
+        )
+        widget.cancelled.connect(self._cancel_quick_add_location)
+        self.tree.setItemWidget(quick_item, 0, widget)
+        self._quick_add_item = quick_item
+        category_item.setExpanded(True)
+        widget.focus_input()
+
+    def _cancel_quick_add_location(self) -> None:
+        if self._quick_add_item is None:
+            return
+        widget = self.tree.itemWidget(self._quick_add_item, 0)
+        if widget is not None:
+            self.tree.removeItemWidget(self._quick_add_item, 0)
+            widget.deleteLater()
+        parent = self._quick_add_item.parent()
+        if parent is not None:
+            parent.removeChild(self._quick_add_item)
+        self._quick_add_item = None
+
+    def _confirm_quick_add_location(self, category_id: int, title: str, sort_order: int) -> None:
+        try:
+            self.db.add_location(category_id, title, sort_order)
+            self._quick_add_item = None
+            self.refresh()
+        except DatabaseError as exc:
+            show_error(self, f"ثبت نقطه انجام نشد: {exc}")
+            if self._quick_add_item is not None:
+                widget = self.tree.itemWidget(self._quick_add_item, 0)
+                if isinstance(widget, LocationQuickAddWidget):
+                    widget.focus_input()
 
     def _on_category_toggle(self, _item: QTreeWidgetItem) -> None:
         self.tree.viewport().update()
@@ -762,7 +841,7 @@ class LocationsPage(Page):
         data = item.data(0, Qt.ItemDataRole.UserRole)
         if not data:
             return
-        if data[0] == "add_location":
+        if data[0] == "add_location" or data[0] == "quick_add_location":
             return
         if data[0] == "category":
             self.selected_location_id = None

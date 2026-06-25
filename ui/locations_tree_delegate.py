@@ -29,11 +29,18 @@ class LocationsTreeDelegate(QStyledItemDelegate):
             return QSize(option.rect.width(), 54)
         if data[0] == "add_location":
             return QSize(option.rect.width(), 40)
+        if data[0] == "quick_add_location":
+            return QSize(option.rect.width(), 44)
         return QSize(option.rect.width(), 44)
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index) -> None:
         painter.save()
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        item = self.tree.itemFromIndex(index)
+        if item is not None and self.tree.itemWidget(item, 0) is not None:
+            painter.restore()
+            return
 
         data = index.data(Qt.ItemDataRole.UserRole)
         if not data:
