@@ -37,7 +37,7 @@ class MissionFormWidget(QWidget):
     cancelled = Signal()
 
     MAX_DESTINATIONS = 10
-    FORM_MAX_WIDTH = 740
+    FORM_MAX_WIDTH = 860
 
     def __init__(self, db: DatabaseManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)

@@ -178,7 +178,7 @@ class DashboardPage(Page):
     def _resize_mission_modal(self) -> None:
         if not hasattr(self, "mission_card"):
             return
-        card_width = min(800, max(700, int(self.width() * 0.58)))
+        card_width = min(940, max(820, int(self.width() * 0.65)))
         card_height = min(720, max(580, int(self.height() * 0.78)))
         self.mission_card.setFixedWidth(card_width)
         self.mission_scroll.setMinimumHeight(card_height)
