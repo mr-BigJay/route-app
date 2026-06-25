@@ -917,6 +917,7 @@ QLabel#reportsFieldLabel {
     color: #1E3A8A;
     font-size: 12px;
     font-weight: 700;
+    padding-top: 2px;
 }
 
 QLineEdit#reportsFilterInput,
