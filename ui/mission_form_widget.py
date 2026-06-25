@@ -126,12 +126,12 @@ class MissionFormWidget(QWidget):
         origin_layout = origin_group.layout()
         origin_layout.addWidget(
             self._two_field_row(
-                "نقطه مبدا *",
-                self.origin_location_combo,
                 "دسته‌بندی مبدا *",
                 self.origin_category_combo,
-                65,
+                "نقطه مبدا *",
+                self.origin_location_combo,
                 35,
+                65,
             )
         )
         body_layout.addWidget(origin_group)
@@ -391,8 +391,8 @@ class MissionFormWidget(QWidget):
         actions_layout.addWidget(remove_button, alignment=Qt.AlignmentFlag.AlignHCenter)
         actions_layout.addStretch(1)
         layout.addWidget(actions)
-        layout.addWidget(self._field_box("دسته‌بندی مقصد *", category_combo), stretch=35)
         layout.addWidget(self._field_box("نقطه مقصد *", location_combo), stretch=65)
+        layout.addWidget(self._field_box("دسته‌بندی مقصد *", category_combo), stretch=35)
         self.destinations_container.addWidget(row)
         self.destination_rows.append((row, category_combo, location_combo))
         self._sync_destination_action_buttons()
