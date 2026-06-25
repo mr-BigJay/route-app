@@ -5,6 +5,7 @@ import re
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -91,17 +92,6 @@ class MissionFormWidget(QWidget):
         self.driver_profile_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         self.driver_profile_label.setMinimumHeight(FORM_FIELD_HEIGHT)
         self.driver_profile_label.setMaximumHeight(FORM_FIELD_HEIGHT)
-        body_layout.addWidget(
-            self._two_field_row(
-                "راننده *",
-                self.driver_combo,
-                "پروفایل راننده و خودرو",
-                self.driver_profile_label,
-                35,
-                65,
-            )
-        )
-
         self.date_input = QLineEdit()
         self._prepare_input(self.date_input)
         self.date_input.setPlaceholderText("yyyy/mm/dd")
@@ -113,7 +103,7 @@ class MissionFormWidget(QWidget):
         self.passengers_input = QLineEdit()
         self._prepare_input(self.passengers_input)
         self.passengers_input.setPlaceholderText("مثال: علی احمدی و رضا محمدی")
-        body_layout.addWidget(self._driver_profile_followup_row())
+        body_layout.addWidget(self._driver_section())
 
         self.origin_category_combo = NoWheelComboBox()
         self.origin_location_combo = NoWheelComboBox()
@@ -173,14 +163,13 @@ class MissionFormWidget(QWidget):
 
         root.addWidget(container, 1)
 
-    def _driver_profile_followup_row(self) -> QWidget:
-        row = QWidget()
-        row.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
-        layout = QHBoxLayout(row)
-        layout.setDirection(QHBoxLayout.Direction.LeftToRight)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
-        layout.addWidget(self._field_box("سرنشینان", self.passengers_input), stretch=58)
+    def _driver_section(self) -> QWidget:
+        section = QWidget()
+        section.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        grid = QGridLayout(section)
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setHorizontalSpacing(8)
+        grid.setVerticalSpacing(12)
 
         date_time_column = QWidget()
         date_time_column.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
@@ -190,8 +179,14 @@ class MissionFormWidget(QWidget):
         date_time_layout.setSpacing(8)
         date_time_layout.addWidget(self._field_box("ساعت *", self.time_input), stretch=2)
         date_time_layout.addWidget(self._field_box("تاریخ *", self.date_input), stretch=3)
-        layout.addWidget(date_time_column, stretch=42)
-        return row
+
+        grid.addWidget(self._field_box("پروفایل راننده و خودرو", self.driver_profile_label), 0, 0)
+        grid.addWidget(self._field_box("راننده *", self.driver_combo), 0, 1)
+        grid.addWidget(self._field_box("سرنشینان", self.passengers_input), 1, 0)
+        grid.addWidget(date_time_column, 1, 1)
+        grid.setColumnStretch(0, 65)
+        grid.setColumnStretch(1, 35)
+        return section
 
     def _section_group(self, title: str) -> QFrame:
         group = QFrame()
