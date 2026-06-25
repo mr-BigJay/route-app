@@ -37,7 +37,6 @@ class MissionFormWidget(QWidget):
     cancelled = Signal()
 
     MAX_DESTINATIONS = 10
-    FORM_MAX_WIDTH = 860
 
     def __init__(self, db: DatabaseManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -47,6 +46,7 @@ class MissionFormWidget(QWidget):
         self._formatting_date = False
         self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.setObjectName("missionFormWidget")
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -56,7 +56,7 @@ class MissionFormWidget(QWidget):
 
         container = QWidget()
         container.setObjectName("missionFormContainer")
-        container.setMaximumWidth(self.FORM_MAX_WIDTH)
+        container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -171,7 +171,7 @@ class MissionFormWidget(QWidget):
         layout.addWidget(title_bar)
         layout.addWidget(form_body)
 
-        root.addWidget(container, alignment=Qt.AlignmentFlag.AlignHCenter)
+        root.addWidget(container, 1)
 
     def _driver_profile_followup_row(self) -> QWidget:
         row = QWidget()
@@ -180,7 +180,7 @@ class MissionFormWidget(QWidget):
         layout.setDirection(QHBoxLayout.Direction.LeftToRight)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
-        layout.addWidget(self._field_box("سرنشینان", self.passengers_input), stretch=65)
+        layout.addWidget(self._field_box("سرنشینان", self.passengers_input), stretch=58)
 
         date_time_column = QWidget()
         date_time_column.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
@@ -190,7 +190,7 @@ class MissionFormWidget(QWidget):
         date_time_layout.setSpacing(8)
         date_time_layout.addWidget(self._field_box("ساعت *", self.time_input), stretch=2)
         date_time_layout.addWidget(self._field_box("تاریخ *", self.date_input), stretch=3)
-        layout.addWidget(date_time_column, stretch=35)
+        layout.addWidget(date_time_column, stretch=42)
         return row
 
     def _section_group(self, title: str) -> QFrame:
