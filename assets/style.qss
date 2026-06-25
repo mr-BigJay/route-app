@@ -941,6 +941,10 @@ QComboBox#reportsFilterInput:focus {
     border: 1px solid #2563EB;
 }
 
+QLineEdit#reportsFilterInput[dateField="true"] {
+    qproperty-alignment: AlignCenter;
+}
+
 QComboBox#reportsFilterInput::drop-down {
     border: none;
     width: 22px;

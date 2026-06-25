@@ -109,6 +109,7 @@ class ReportsPage(Page):
         self.end_date_input = QLineEdit()
         for date_input in [self.start_date_input, self.end_date_input]:
             self._style_filter_input(date_input)
+            date_input.setProperty("dateField", True)
             date_input.setPlaceholderText("yyyy/mm/dd")
             date_input.setMaxLength(10)
             date_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -118,8 +119,8 @@ class ReportsPage(Page):
         filters_row = QHBoxLayout(filters_container)
         filters_row.setContentsMargins(0, 0, 0, 0)
         filters_row.setSpacing(12)
-        filters_row.addWidget(self._inline_field("تاریخ انتها", self.end_date_input), stretch=1)
-        filters_row.addWidget(self._inline_field("تاریخ ابتدا", self.start_date_input), stretch=1)
+        filters_row.addWidget(self._inline_field("تاریخ انتها", self.end_date_input, centered=True), stretch=1)
+        filters_row.addWidget(self._inline_field("تاریخ ابتدا", self.start_date_input, centered=True), stretch=1)
         filters_row.addWidget(self._inline_field("راننده", self.driver_combo), stretch=3)
 
         buttons = QHBoxLayout()
@@ -144,11 +145,11 @@ class ReportsPage(Page):
         button.setCursor(Qt.CursorShape.PointingHandCursor)
         return button
 
-    def _inline_field(self, label: str, widget: QWidget) -> QWidget:
-        box = QWidget()
-        box.setObjectName("reportsFilterField")
-        box.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        layout = QHBoxLayout(box)
+    def _inline_field(self, label: str, widget: QWidget, *, centered: bool = False) -> QWidget:
+        inner = QWidget()
+        inner.setObjectName("reportsFilterField")
+        inner.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        layout = QHBoxLayout(inner)
         layout.setDirection(QHBoxLayout.Direction.RightToLeft)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
@@ -156,10 +157,24 @@ class ReportsPage(Page):
         label_widget.setObjectName("reportsFieldLabel")
         label_widget.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         label_widget.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        if centered:
+            widget.setFixedWidth(128)
+            widget.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        else:
+            widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         layout.addWidget(label_widget)
-        layout.addWidget(widget, stretch=1)
-        return box
+        layout.addWidget(widget, 0 if centered else 1)
+        if not centered:
+            return inner
+
+        wrapper = QWidget()
+        wrapper.setObjectName("reportsFilterFieldCentered")
+        wrapper_layout = QHBoxLayout(wrapper)
+        wrapper_layout.setContentsMargins(0, 0, 0, 0)
+        wrapper_layout.addStretch(1)
+        wrapper_layout.addWidget(inner)
+        wrapper_layout.addStretch(1)
+        return wrapper
 
     def _table_card(self) -> QFrame:
         card, layout = self._build_themed_card("نتایج گزارش")
