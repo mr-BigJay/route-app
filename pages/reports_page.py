@@ -118,7 +118,7 @@ class ReportsPage(Page):
         filters_row.setSpacing(12)
         filters_row.addWidget(self._inline_field("راننده", self.driver_combo), stretch=1)
         filters_row.addWidget(self._inline_field("تاریخ ابتدا", self.start_date_input), stretch=1)
-        filters_row.addWidget(self._inline_field("تاریخ انتهای گزارش", self.end_date_input), stretch=1)
+        filters_row.addWidget(self._inline_field("تاریخ انتها", self.end_date_input), stretch=1)
 
         buttons = QHBoxLayout()
         buttons.setDirection(QHBoxLayout.Direction.RightToLeft)
@@ -144,14 +144,15 @@ class ReportsPage(Page):
 
     def _inline_field(self, label: str, widget: QWidget) -> QWidget:
         box = QWidget()
-        box.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        box.setObjectName("reportsFilterField")
+        box.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         layout = QHBoxLayout(box)
+        layout.setDirection(QHBoxLayout.Direction.RightToLeft)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
         label_widget = QLabel(label)
         label_widget.setObjectName("reportsFieldLabel")
-        label_widget.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        label_widget.setMinimumWidth(118)
+        label_widget.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         label_widget.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         layout.addWidget(label_widget)
