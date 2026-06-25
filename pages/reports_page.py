@@ -120,9 +120,9 @@ class ReportsPage(Page):
         fields_row = QHBoxLayout()
         fields_row.setSpacing(16)
         fields_row.setContentsMargins(0, 0, 0, 0)
-        fields_row.addWidget(self._stacked_field("تاریخ انتها", self.end_date_input, field_width=date_width))
-        fields_row.addWidget(self._stacked_field("تاریخ ابتدا", self.start_date_input, field_width=date_width))
         fields_row.addWidget(self._stacked_field("راننده", self.driver_combo, field_width=driver_width))
+        fields_row.addWidget(self._stacked_field("تاریخ ابتدا", self.start_date_input, field_width=date_width))
+        fields_row.addWidget(self._stacked_field("تاریخ انتها", self.end_date_input, field_width=date_width))
 
         fields_wrapper = QWidget()
         fields_wrapper.setLayout(fields_row)
