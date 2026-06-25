@@ -119,9 +119,18 @@ class ReportsPage(Page):
         filters_row = QHBoxLayout(filters_container)
         filters_row.setContentsMargins(0, 0, 0, 0)
         filters_row.setSpacing(12)
-        filters_row.addWidget(self._inline_field("تاریخ انتها", self.end_date_input, centered=True), stretch=1)
-        filters_row.addWidget(self._inline_field("تاریخ ابتدا", self.start_date_input, centered=True), stretch=1)
-        filters_row.addWidget(self._inline_field("راننده", self.driver_combo), stretch=3)
+        filters_row.addWidget(
+            self._stacked_field("تاریخ انتها", self.end_date_input, centered=True, fixed_width=128),
+            stretch=1,
+        )
+        filters_row.addWidget(
+            self._stacked_field("تاریخ ابتدا", self.start_date_input, centered=True, fixed_width=128),
+            stretch=1,
+        )
+        filters_row.addWidget(
+            self._stacked_field("راننده", self.driver_combo, width_ratio=0.7),
+            stretch=3,
+        )
 
         buttons = QHBoxLayout()
         buttons.setDirection(QHBoxLayout.Direction.RightToLeft)
@@ -145,36 +154,56 @@ class ReportsPage(Page):
         button.setCursor(Qt.CursorShape.PointingHandCursor)
         return button
 
-    def _inline_field(self, label: str, widget: QWidget, *, centered: bool = False) -> QWidget:
-        inner = QWidget()
-        inner.setObjectName("reportsFilterField")
-        inner.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        layout = QHBoxLayout(inner)
-        layout.setDirection(QHBoxLayout.Direction.RightToLeft)
+    def _stacked_field(
+        self,
+        label: str,
+        widget: QWidget,
+        *,
+        centered: bool = False,
+        fixed_width: int | None = None,
+        width_ratio: float | None = None,
+    ) -> QWidget:
+        box = QWidget()
+        box.setObjectName("reportsFilterField")
+        box.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        layout = QVBoxLayout(box)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
+
         label_widget = QLabel(label)
         label_widget.setObjectName("reportsFieldLabel")
-        label_widget.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        label_widget.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        if centered:
-            widget.setFixedWidth(128)
+        label_widget.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        layout.addWidget(label_widget)
+
+        input_row = QWidget()
+        input_layout = QHBoxLayout(input_row)
+        input_layout.setContentsMargins(0, 0, 0, 0)
+        input_layout.setSpacing(0)
+
+        if fixed_width is not None:
+            widget.setFixedWidth(fixed_width)
             widget.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+
+        if centered:
+            input_layout.addStretch(1)
+            input_layout.addWidget(widget, 0, Qt.AlignmentFlag.AlignHCenter)
+            input_layout.addStretch(1)
+        elif width_ratio is not None:
+            widget.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+
+            def resize_event(event, field_box=box, target=widget, ratio=width_ratio) -> None:
+                QWidget.resizeEvent(field_box, event)
+                target.setFixedWidth(max(96, int(field_box.width() * ratio)))
+
+            box.resizeEvent = resize_event  # type: ignore[method-assign]
+            input_layout.addStretch(1)
+            input_layout.addWidget(widget, 0, Qt.AlignmentFlag.AlignRight)
         else:
             widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        layout.addWidget(label_widget)
-        layout.addWidget(widget, 0 if centered else 1)
-        if not centered:
-            return inner
+            input_layout.addWidget(widget)
 
-        wrapper = QWidget()
-        wrapper.setObjectName("reportsFilterFieldCentered")
-        wrapper_layout = QHBoxLayout(wrapper)
-        wrapper_layout.setContentsMargins(0, 0, 0, 0)
-        wrapper_layout.addStretch(1)
-        wrapper_layout.addWidget(inner)
-        wrapper_layout.addStretch(1)
-        return wrapper
+        layout.addWidget(input_row)
+        return box
 
     def _table_card(self) -> QFrame:
         card, layout = self._build_themed_card("نتایج گزارش")
