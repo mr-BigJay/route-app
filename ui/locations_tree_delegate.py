@@ -23,8 +23,13 @@ class LocationsTreeDelegate(QStyledItemDelegate):
 
     def sizeHint(self, option: QStyleOptionViewItem, index) -> QSize:
         data = index.data(Qt.ItemDataRole.UserRole)
-        is_category = bool(data and data[0] == "category")
-        return QSize(option.rect.width(), 54 if is_category else 44)
+        if not data:
+            return QSize(option.rect.width(), 44)
+        if data[0] == "category":
+            return QSize(option.rect.width(), 54)
+        if data[0] == "add_location":
+            return QSize(option.rect.width(), 40)
+        return QSize(option.rect.width(), 44)
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index) -> None:
         painter.save()
@@ -37,12 +42,18 @@ class LocationsTreeDelegate(QStyledItemDelegate):
 
         rect = option.rect.adjusted(8, 4, -8, -4)
         is_category = data[0] == "category"
-        title = str(data[3])
+        is_add_row = data[0] == "add_location"
+        title = str(data[3]) if len(data) > 3 else ""
         accent = self._accent_for_item(index, data)
         is_selected = bool(option.state & QStyle.StateFlag.State_Selected)
         is_hovered = bool(option.state & QStyle.StateFlag.State_MouseOver)
         item = self.tree.itemFromIndex(index)
         is_expanded = bool(item and item.isExpanded())
+
+        if is_add_row:
+            self._paint_add_location(painter, rect, accent, is_hovered)
+            painter.restore()
+            return
 
         if is_category and (is_selected or is_expanded):
             painter.setBrush(QColor("#DBEAFE"))
@@ -72,6 +83,8 @@ class LocationsTreeDelegate(QStyledItemDelegate):
     def _accent_for_item(self, index, data) -> str:
         if data[0] == "category":
             return CATEGORY_COLORS.get(str(data[3]), "#2563EB")
+        if data[0] == "add_location":
+            return CATEGORY_COLORS.get(str(data[2]), "#2563EB")
         item = self.tree.itemFromIndex(index)
         parent = item.parent() if item is not None else None
         if parent is None:
@@ -80,6 +93,18 @@ class LocationsTreeDelegate(QStyledItemDelegate):
         if not parent_data:
             return "#2563EB"
         return CATEGORY_COLORS.get(str(parent_data[3]), "#2563EB")
+
+    @staticmethod
+    def _location_child_count(item) -> int:
+        if item is None:
+            return 0
+        count = 0
+        for index in range(item.childCount()):
+            child = item.child(index)
+            child_data = child.data(0, Qt.ItemDataRole.UserRole)
+            if child_data and child_data[0] == "location":
+                count += 1
+        return count
 
     def _paint_badge(self, painter: QPainter, rect: QRect, child_count: int) -> None:
         badge_text = f"{to_persian_digits(child_count)} نقطه"
@@ -105,7 +130,7 @@ class LocationsTreeDelegate(QStyledItemDelegate):
         highlighted: bool,
     ) -> None:
         item = self.tree.itemFromIndex(index)
-        child_count = item.childCount() if item is not None else 0
+        child_count = self._location_child_count(item)
         expanded = item.isExpanded() if item is not None else False
 
         self._paint_badge(painter, rect, child_count)
@@ -136,7 +161,7 @@ class LocationsTreeDelegate(QStyledItemDelegate):
         painter.drawText(title_rect, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, title)
         cursor_x = title_rect.left() - 8
 
-        if child_count > 0:
+        if child_count > 0 or (item is not None and item.childCount() > 0):
             chevron_key = "chevron_down" if expanded else "chevron_right"
             chevron = self.icons.get(chevron_key)
             if chevron is not None:
@@ -164,3 +189,36 @@ class LocationsTreeDelegate(QStyledItemDelegate):
         title_width = painter.fontMetrics().horizontalAdvance(title)
         title_rect = QRect(cursor_x - title_width, rect.top(), title_width, rect.height())
         painter.drawText(title_rect, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, title)
+
+    def _paint_add_location(
+        self,
+        painter: QPainter,
+        rect: QRect,
+        accent: str,
+        is_hovered: bool,
+    ) -> None:
+        painter.setBrush(QColor("#EFF6FF" if is_hovered else "#F8FAFC"))
+        painter.setPen(QPen(QColor("#93C5FD"), 1, Qt.PenStyle.DashLine))
+        painter.drawRoundedRect(rect, 10, 10)
+
+        plus_size = 22
+        plus_rect = QRect(rect.right() - plus_size - 12, rect.center().y() - plus_size // 2, plus_size, plus_size)
+        painter.setBrush(QColor(accent))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawEllipse(plus_rect)
+
+        plus_font = QFont(painter.font())
+        plus_font.setBold(True)
+        plus_font.setPointSize(12)
+        painter.setFont(plus_font)
+        painter.setPen(QColor("#FFFFFF"))
+        painter.drawText(plus_rect, Qt.AlignmentFlag.AlignCenter, "+")
+
+        label = "افزودن نقطه"
+        label_font = QFont(painter.font())
+        label_font.setPointSize(max(label_font.pointSize(), 10))
+        painter.setFont(label_font)
+        painter.setPen(QColor("#2563EB" if is_hovered else "#475569"))
+        label_width = painter.fontMetrics().horizontalAdvance(label)
+        label_rect = QRect(plus_rect.left() - label_width - 10, rect.top(), label_width, rect.height())
+        painter.drawText(label_rect, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, label)

@@ -995,15 +995,39 @@ QPushButton#locationPageButton[variant="category"]:hover {
     border: 1px solid #7C3AED;
 }
 
-QPushButton#locationPageButton[variant="location"] {
+QPushButton#locationPageButton[variant="location"],
+QPushButton#locationPageButton[variant="register"] {
     background: #DCFCE7;
     color: #166534;
     border: 1px solid #86EFAC;
 }
 
-QPushButton#locationPageButton[variant="location"]:hover {
+QPushButton#locationPageButton[variant="location"]:hover,
+QPushButton#locationPageButton[variant="register"]:hover {
     background: #BBF7D0;
     border: 1px solid #22C55E;
+}
+
+QPushButton#locationPageButton[variant="edit"] {
+    background: #EDE9FE;
+    color: #5B21B6;
+    border: 1px solid #C4B5FD;
+}
+
+QPushButton#locationPageButton[variant="edit"]:hover {
+    background: #DDD6FE;
+    border: 1px solid #7C3AED;
+}
+
+QPushButton#locationPageButton[variant="delete"] {
+    background: #FEF2F2;
+    color: #B91C1C;
+    border: 1px solid #FECACA;
+}
+
+QPushButton#locationPageButton[variant="delete"]:hover {
+    background: #FEE2E2;
+    border: 1px solid #EF4444;
 }
 
 QFrame#locationsTreeCard {
@@ -1077,4 +1101,46 @@ QLabel#formModalTitle {
     color: #1E3A8A;
     font-size: 18px;
     font-weight: 800;
+}
+
+QLabel#formModalWarning {
+    color: #B45309;
+    background: #FFFBEB;
+    border: 1px solid #FDE68A;
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 160%;
+}
+
+QTabWidget#locationsManageTabs::pane {
+    border: 1px solid #BFDBFE;
+    border-radius: 12px;
+    background: #F8FAFC;
+    padding: 4px;
+}
+
+QTabWidget#locationsManageTabs QTabBar::tab {
+    background: #EFF6FF;
+    color: #475569;
+    border: 1px solid #BFDBFE;
+    border-bottom: none;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    padding: 10px 22px;
+    margin-left: 4px;
+    font-weight: 700;
+    min-width: 110px;
+}
+
+QTabWidget#locationsManageTabs QTabBar::tab:selected {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1E3A8A, stop:1 #2563EB);
+    color: #FFFFFF;
+    border-color: #2563EB;
+}
+
+QTabWidget#locationsManageTabs QTabBar::tab:hover:!selected {
+    background: #DBEAFE;
+    color: #1D4ED8;
 }

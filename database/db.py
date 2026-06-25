@@ -470,6 +470,8 @@ class DatabaseManager:
         )
 
     def update_category(self, category_id: int, title: str, sort_order: int) -> None:
+        # Category titles are not referenced by missions; only location titles are
+        # snapshotted into mission records at save time.
         self.execute(
             "UPDATE categories SET title = ?, sort_order = ? WHERE id = ?",
             (title.strip(), sort_order, category_id),
@@ -528,6 +530,8 @@ class DatabaseManager:
         )
 
     def update_location(self, location_id: int, category_id: int, title: str) -> None:
+        # Missions store origin/destination as plain text, so edits here do not
+        # retroactively change previously saved mission records.
         self.execute(
             "UPDATE locations SET category_id = ?, title = ? WHERE id = ?",
             (category_id, title.strip(), location_id),

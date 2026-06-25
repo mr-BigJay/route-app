@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QSizePolicy,
+    QTabWidget,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
@@ -23,7 +24,7 @@ from PySide6.QtWidgets import (
 from database.db import DatabaseError, DatabaseManager
 from ui.form_widgets import NoWheelComboBox, NoWheelSpinBox
 from ui.locations_tree_delegate import LocationsTreeDelegate
-from ui.utils import Page, confirm, make_stat_card, show_error, show_success, to_english_digits, to_persian_digits
+from ui.utils import Page, confirm, make_stat_card, show_error, show_success, to_persian_digits
 
 
 PERMANENT_CATEGORY_TITLES = ["ستاد", "بیمارستان", "مرکز درمانی", "خانه بهداشت"]
@@ -35,6 +36,12 @@ CATEGORY_STAT_LABELS = {
     "خانه بهداشت": "خانه های بهداشت",
 }
 
+MODAL_WARNING_TEXT = (
+    "توجه: در ویرایش یا حذف موارد دقت کنید. این تغییرات ممکن است بر فرم‌های "
+    "در حال استفاده اثر بگذارد. ماموریت‌های ثبت‌شده قبلی با همان متن ذخیره‌شده "
+    "باقی می‌مانند و تغییر نمی‌کنند."
+)
+
 
 class LocationsPage(Page):
     def __init__(self, db: DatabaseManager) -> None:
@@ -43,6 +50,7 @@ class LocationsPage(Page):
         self.db = db
         self.selected_category_id: int | None = None
         self.selected_location_id: int | None = None
+        self._modal_mode = "register"
         self._tree_icons = self._load_tree_icons()
 
         self.page_content = QWidget()
@@ -62,8 +70,7 @@ class LocationsPage(Page):
         page_content_layout.addLayout(body, stretch=1)
 
         self.root_layout.addWidget(self.page_content, stretch=1)
-        self._build_category_overlay()
-        self._build_location_overlay()
+        self._build_management_overlay()
         self._center_page_header()
 
     def _center_page_header(self) -> None:
@@ -84,13 +91,16 @@ class LocationsPage(Page):
         column = QVBoxLayout()
         column.setSpacing(14)
 
-        category_button = self._page_action_button("ثبت دسته بندی", "category")
-        location_button = self._page_action_button("ثبت نقاط", "location")
-        category_button.clicked.connect(self.open_category_overlay)
-        location_button.clicked.connect(self.open_location_overlay)
+        register_button = self._page_action_button("ثبت", "register")
+        edit_button = self._page_action_button("ویرایش", "edit")
+        delete_button = self._page_action_button("حذف", "delete")
+        register_button.clicked.connect(self.open_register_modal)
+        edit_button.clicked.connect(self.open_edit_modal)
+        delete_button.clicked.connect(self.open_delete_modal)
 
-        column.addWidget(category_button)
-        column.addWidget(location_button)
+        column.addWidget(register_button)
+        column.addWidget(edit_button)
+        column.addWidget(delete_button)
         column.addStretch(1)
         return column
 
@@ -161,25 +171,62 @@ class LocationsPage(Page):
         layout.addWidget(tree_wrap, stretch=1)
         return card
 
-    def _build_category_overlay(self) -> None:
-        self.category_overlay = QFrame(self)
-        self.category_overlay.setObjectName("formOverlay")
-        self.category_overlay.hide()
+    def _build_management_overlay(self) -> None:
+        self.management_overlay = QFrame(self)
+        self.management_overlay.setObjectName("formOverlay")
+        self.management_overlay.hide()
 
-        overlay_layout = QVBoxLayout(self.category_overlay)
+        overlay_layout = QVBoxLayout(self.management_overlay)
         overlay_layout.setContentsMargins(24, 24, 24, 24)
         overlay_layout.addStretch(1)
 
         card = QFrame()
         card.setObjectName("formModalCard")
-        card.setFixedWidth(460)
+        card.setFixedWidth(520)
         card_layout = QVBoxLayout(card)
         card_layout.setContentsMargins(24, 22, 24, 22)
         card_layout.setSpacing(14)
 
-        title = QLabel("ثبت دسته بندی")
-        title.setObjectName("formModalTitle")
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.modal_title = QLabel("ثبت")
+        self.modal_title.setObjectName("formModalTitle")
+        self.modal_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.modal_warning = QLabel(MODAL_WARNING_TEXT)
+        self.modal_warning.setObjectName("formModalWarning")
+        self.modal_warning.setWordWrap(True)
+        self.modal_warning.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.modal_warning.hide()
+
+        self.management_tabs = QTabWidget()
+        self.management_tabs.setObjectName("locationsManageTabs")
+        self.management_tabs.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        self.management_tabs.addTab(self._build_category_tab(), "دسته‌بندی‌ها")
+        self.management_tabs.addTab(self._build_location_tab(), "نقاط")
+        self.management_tabs.currentChanged.connect(self._update_modal_title)
+
+        buttons = QHBoxLayout()
+        buttons.setSpacing(10)
+        self.modal_primary_button = self.action_button("ثبت")
+        back_button = self.action_button("بازگشت", "ghost")
+        self.modal_primary_button.clicked.connect(self._on_modal_primary_action)
+        back_button.clicked.connect(self.close_management_overlay)
+        buttons.addStretch(1)
+        buttons.addWidget(self.modal_primary_button)
+        buttons.addWidget(back_button)
+        buttons.addStretch(1)
+
+        card_layout.addWidget(self.modal_title)
+        card_layout.addWidget(self.modal_warning)
+        card_layout.addWidget(self.management_tabs)
+        card_layout.addLayout(buttons)
+        overlay_layout.addWidget(card, alignment=Qt.AlignmentFlag.AlignCenter)
+        overlay_layout.addStretch(1)
+
+    def _build_category_tab(self) -> QWidget:
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(8, 12, 8, 8)
+        layout.setSpacing(12)
 
         form = QFormLayout()
         form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
@@ -187,52 +234,18 @@ class LocationsPage(Page):
         self.category_order_input.setRange(1, 999)
         self.category_title_input = QLineEdit()
         self.category_title_input.setPlaceholderText("مثال: اورژانس")
-        self.category_title_input.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self.category_title_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
         form.addRow("شماره ترتیب *", self.category_order_input)
         form.addRow("عنوان *", self.category_title_input)
+        layout.addLayout(form)
+        layout.addStretch(1)
+        return tab
 
-        buttons = QHBoxLayout()
-        buttons.setSpacing(10)
-        add_button = self.action_button("ثبت")
-        update_button = self.action_button("ویرایش", "secondary")
-        delete_button = self.action_button("حذف", "danger")
-        back_button = self.action_button("بازگشت", "ghost")
-        add_button.clicked.connect(self.add_category)
-        update_button.clicked.connect(self.update_category)
-        delete_button.clicked.connect(self.delete_category)
-        back_button.clicked.connect(self.close_category_overlay)
-        buttons.addStretch(1)
-        buttons.addWidget(add_button)
-        buttons.addWidget(update_button)
-        buttons.addWidget(delete_button)
-        buttons.addWidget(back_button)
-        buttons.addStretch(1)
-
-        card_layout.addWidget(title)
-        card_layout.addLayout(form)
-        card_layout.addLayout(buttons)
-        overlay_layout.addWidget(card, alignment=Qt.AlignmentFlag.AlignCenter)
-        overlay_layout.addStretch(1)
-
-    def _build_location_overlay(self) -> None:
-        self.location_overlay = QFrame(self)
-        self.location_overlay.setObjectName("formOverlay")
-        self.location_overlay.hide()
-
-        overlay_layout = QVBoxLayout(self.location_overlay)
-        overlay_layout.setContentsMargins(24, 24, 24, 24)
-        overlay_layout.addStretch(1)
-
-        card = QFrame()
-        card.setObjectName("formModalCard")
-        card.setFixedWidth(460)
-        card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(24, 22, 24, 22)
-        card_layout.setSpacing(14)
-
-        title = QLabel("ثبت نقاط")
-        title.setObjectName("formModalTitle")
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    def _build_location_tab(self) -> QWidget:
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(8, 12, 8, 8)
+        layout.setSpacing(12)
 
         form = QFormLayout()
         form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
@@ -240,54 +253,128 @@ class LocationsPage(Page):
         self.location_category_combo.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.location_title_input = QLineEdit()
         self.location_title_input.setPlaceholderText("مثال: مرکز کلاچای")
-        self.location_title_input.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self.location_title_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
         form.addRow("دسته‌بندی *", self.location_category_combo)
         form.addRow("عنوان نقطه *", self.location_title_input)
+        layout.addLayout(form)
+        layout.addStretch(1)
+        return tab
 
-        buttons = QHBoxLayout()
-        buttons.setSpacing(10)
-        add_button = self.action_button("ثبت")
-        update_button = self.action_button("ویرایش", "secondary")
-        delete_button = self.action_button("حذف", "danger")
-        back_button = self.action_button("بازگشت", "ghost")
-        add_button.clicked.connect(self.add_location)
-        update_button.clicked.connect(self.update_location)
-        delete_button.clicked.connect(self.delete_location)
-        back_button.clicked.connect(self.close_location_overlay)
-        buttons.addStretch(1)
-        buttons.addWidget(add_button)
-        buttons.addWidget(update_button)
-        buttons.addWidget(delete_button)
-        buttons.addWidget(back_button)
-        buttons.addStretch(1)
+    def open_register_modal(self) -> None:
+        self._modal_mode = "register"
+        preset_category_id: int | None = None
+        items = self.tree.selectedItems()
+        if items:
+            data = items[0].data(0, Qt.ItemDataRole.UserRole)
+            if data and data[0] == "location":
+                preset_category_id = int(data[2])
+            elif data and data[0] == "category":
+                preset_category_id = int(data[1])
 
-        card_layout.addWidget(title)
-        card_layout.addLayout(form)
-        card_layout.addLayout(buttons)
-        overlay_layout.addWidget(card, alignment=Qt.AlignmentFlag.AlignCenter)
-        overlay_layout.addStretch(1)
-
-    def open_category_overlay(self) -> None:
-        self._refresh_category_combo()
-        if self.selected_category_id is None:
-            self.clear_category_form()
+        self.clear_category_form()
+        self.clear_location_form()
+        if preset_category_id is not None:
+            self.management_tabs.setCurrentIndex(1)
+            self._preset_location_category(preset_category_id)
         else:
-            self._populate_category_form_from_selection()
-        self._show_overlay(self.category_overlay)
+            self.management_tabs.setCurrentIndex(0)
+        self._apply_modal_mode()
+        self._show_overlay(self.management_overlay)
 
-    def open_location_overlay(self) -> None:
-        self._refresh_category_combo()
-        if self.selected_location_id is None:
-            self.clear_location_form()
-        else:
+    def open_edit_modal(self) -> None:
+        if self.selected_location_id is None and self.selected_category_id is None:
+            show_error(self, "ابتدا یک دسته‌بندی یا نقطه را از درخت انتخاب کنید.")
+            return
+        self._modal_mode = "edit"
+        if self.selected_location_id is not None:
+            self.management_tabs.setCurrentIndex(1)
             self._populate_location_form_from_selection()
-        self._show_overlay(self.location_overlay)
+        else:
+            self.management_tabs.setCurrentIndex(0)
+            self._populate_category_form_from_selection()
+        self._apply_modal_mode()
+        self._show_overlay(self.management_overlay)
 
-    def close_category_overlay(self) -> None:
-        self._hide_overlay(self.category_overlay)
+    def open_delete_modal(self) -> None:
+        if self.selected_location_id is None and self.selected_category_id is None:
+            show_error(self, "ابتدا یک دسته‌بندی یا نقطه را از درخت انتخاب کنید.")
+            return
+        self._modal_mode = "delete"
+        if self.selected_location_id is not None:
+            self.management_tabs.setCurrentIndex(1)
+            self._populate_location_form_from_selection()
+        else:
+            self.management_tabs.setCurrentIndex(0)
+            self._populate_category_form_from_selection()
+        self._apply_modal_mode()
+        self._show_overlay(self.management_overlay)
 
-    def close_location_overlay(self) -> None:
-        self._hide_overlay(self.location_overlay)
+    def _open_register_modal_for_category(self, category_id: int) -> None:
+        self._modal_mode = "register"
+        self.clear_category_form()
+        self.clear_location_form()
+        self.management_tabs.setCurrentIndex(1)
+        self._preset_location_category(category_id)
+        self._apply_modal_mode()
+        self._show_overlay(self.management_overlay)
+
+    def close_management_overlay(self) -> None:
+        self._hide_overlay(self.management_overlay)
+
+    def _apply_modal_mode(self) -> None:
+        is_edit = self._modal_mode == "edit"
+        is_delete = self._modal_mode == "delete"
+        self.modal_warning.setVisible(is_edit or is_delete)
+        self._update_modal_title()
+
+        if self._modal_mode == "register":
+            self.modal_primary_button.setText("ثبت")
+            self.modal_primary_button.setProperty("role", "primary")
+        elif self._modal_mode == "edit":
+            self.modal_primary_button.setText("ذخیره ویرایش")
+            self.modal_primary_button.setProperty("role", "secondary")
+        else:
+            self.modal_primary_button.setText("حذف")
+            self.modal_primary_button.setProperty("role", "danger")
+
+        read_only = is_delete
+        self.category_order_input.setReadOnly(read_only)
+        self.category_title_input.setReadOnly(read_only)
+        self.location_category_combo.setEnabled(not read_only)
+        self.location_title_input.setReadOnly(read_only)
+
+        self.modal_primary_button.style().unpolish(self.modal_primary_button)
+        self.modal_primary_button.style().polish(self.modal_primary_button)
+
+    def _update_modal_title(self) -> None:
+        is_category_tab = self.management_tabs.currentIndex() == 0
+        titles = {
+            ("register", True): "ثبت دسته‌بندی",
+            ("register", False): "ثبت نقطه",
+            ("edit", True): "ویرایش دسته‌بندی",
+            ("edit", False): "ویرایش نقطه",
+            ("delete", True): "حذف دسته‌بندی",
+            ("delete", False): "حذف نقطه",
+        }
+        self.modal_title.setText(titles[(self._modal_mode, is_category_tab)])
+
+    def _on_modal_primary_action(self) -> None:
+        is_category_tab = self.management_tabs.currentIndex() == 0
+        if self._modal_mode == "register":
+            if is_category_tab:
+                self.add_category()
+            else:
+                self.add_location()
+        elif self._modal_mode == "edit":
+            if is_category_tab:
+                self.update_category()
+            else:
+                self.update_location()
+        else:
+            if is_category_tab:
+                self.delete_category()
+            else:
+                self.delete_location()
 
     def _show_overlay(self, overlay: QFrame) -> None:
         blur = QGraphicsBlurEffect(self.page_content)
@@ -338,6 +425,13 @@ class LocationsPage(Page):
         self.location_category_combo.blockSignals(False)
 
     def _refresh_tree(self) -> None:
+        expanded_ids: set[int] = set()
+        for index in range(self.tree.topLevelItemCount()):
+            item = self.tree.topLevelItem(index)
+            data = item.data(0, Qt.ItemDataRole.UserRole)
+            if data and data[0] == "category" and item.isExpanded():
+                expanded_ids.add(int(data[1]))
+
         self.tree.blockSignals(True)
         self.tree.clear()
         categories = self.db.list_categories()
@@ -363,12 +457,25 @@ class LocationsPage(Page):
                 )
                 category_item.addChild(location_item)
 
-            category_item.setExpanded(False)
+            add_item = QTreeWidgetItem([""])
+            add_item.setData(
+                0,
+                Qt.ItemDataRole.UserRole,
+                ("add_location", category["id"], category["title"], ""),
+            )
+            category_item.addChild(add_item)
+            category_item.setExpanded(int(category["id"]) in expanded_ids)
+
         self.tree.blockSignals(False)
 
     def _on_tree_item_clicked(self, item: QTreeWidgetItem, _column: int) -> None:
         data = item.data(0, Qt.ItemDataRole.UserRole)
-        if data and data[0] == "category" and item.childCount() > 0:
+        if not data:
+            return
+        if data[0] == "add_location":
+            self._open_register_modal_for_category(int(data[1]))
+            return
+        if data[0] == "category":
             item.setExpanded(not item.isExpanded())
 
     def _on_category_toggle(self, _item: QTreeWidgetItem) -> None:
@@ -384,7 +491,7 @@ class LocationsPage(Page):
             self.db.add_category(title, sort_order)
             show_success(self, "دسته‌بندی ثبت شد.")
             self.clear_category_form()
-            self.close_category_overlay()
+            self.close_management_overlay()
             self.refresh()
         except DatabaseError as exc:
             show_error(self, f"ثبت دسته‌بندی انجام نشد: {exc}")
@@ -407,7 +514,7 @@ class LocationsPage(Page):
             self.db.update_category(self.selected_category_id, title, sort_order)
             show_success(self, "دسته‌بندی ویرایش شد.")
             self.clear_category_form()
-            self.close_category_overlay()
+            self.close_management_overlay()
             self.refresh()
         except DatabaseError as exc:
             show_error(self, f"ویرایش دسته‌بندی انجام نشد: {exc}")
@@ -420,14 +527,14 @@ class LocationsPage(Page):
         if category and int(category.get("is_locked", 0)):
             show_error(self, "دسته‌بندی‌های ثابت غیرقابل حذف هستند.")
             return
-        if not confirm(self, "با حذف دسته‌بندی، نقاط زیرمجموعه نیز حذف می‌شوند. ادامه می‌دهید؟"):
+        if not confirm(self, "با حذف دسته‌بندی، نقاط زیرمجموعه نیز حذف می‌شوند. ماموریت‌های قبلی تغییر نمی‌کنند. ادامه می‌دهید؟"):
             return
         try:
             self.db.delete_category(self.selected_category_id)
             show_success(self, "دسته‌بندی حذف شد.")
             self.clear_category_form()
             self.clear_location_form()
-            self.close_category_overlay()
+            self.close_management_overlay()
             self.refresh()
         except DatabaseError as exc:
             show_error(self, f"حذف دسته‌بندی انجام نشد: {exc}")
@@ -442,7 +549,7 @@ class LocationsPage(Page):
             self.db.add_location(int(category_id), title)
             show_success(self, "نقطه ثبت شد.")
             self.clear_location_form()
-            self.close_location_overlay()
+            self.close_management_overlay()
             self.refresh()
         except DatabaseError as exc:
             show_error(self, f"ثبت نقطه انجام نشد: {exc}")
@@ -460,7 +567,7 @@ class LocationsPage(Page):
             self.db.update_location(self.selected_location_id, int(category_id), title)
             show_success(self, "نقطه ویرایش شد.")
             self.clear_location_form()
-            self.close_location_overlay()
+            self.close_management_overlay()
             self.refresh()
         except DatabaseError as exc:
             show_error(self, f"ویرایش نقطه انجام نشد: {exc}")
@@ -469,13 +576,13 @@ class LocationsPage(Page):
         if self.selected_location_id is None:
             show_error(self, "ابتدا یک نقطه را انتخاب کنید.")
             return
-        if not confirm(self, "آیا از حذف نقطه انتخاب‌شده مطمئن هستید؟"):
+        if not confirm(self, "آیا از حذف نقطه انتخاب‌شده مطمئن هستید؟ ماموریت‌های قبلی تغییر نمی‌کنند."):
             return
         try:
             self.db.delete_location(self.selected_location_id)
             show_success(self, "نقطه حذف شد.")
             self.clear_location_form()
-            self.close_location_overlay()
+            self.close_management_overlay()
             self.refresh()
         except DatabaseError as exc:
             show_error(self, f"حذف نقطه انجام نشد: {exc}")
@@ -488,12 +595,19 @@ class LocationsPage(Page):
         data = item.data(0, Qt.ItemDataRole.UserRole)
         if not data:
             return
+        if data[0] == "add_location":
+            return
         if data[0] == "category":
             self.selected_location_id = None
             self.selected_category_id = int(data[1])
         elif data[0] == "location":
             self.selected_category_id = None
             self.selected_location_id = int(data[1])
+
+    def _preset_location_category(self, category_id: int) -> None:
+        index = self.location_category_combo.findData(category_id)
+        if index >= 0:
+            self.location_category_combo.setCurrentIndex(index)
 
     def _populate_category_form_from_selection(self) -> None:
         if self.selected_category_id is None:
@@ -534,7 +648,5 @@ class LocationsPage(Page):
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
-        if hasattr(self, "category_overlay"):
-            self.category_overlay.setGeometry(self.rect())
-        if hasattr(self, "location_overlay"):
-            self.location_overlay.setGeometry(self.rect())
+        if hasattr(self, "management_overlay"):
+            self.management_overlay.setGeometry(self.rect())
