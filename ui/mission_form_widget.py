@@ -89,7 +89,7 @@ class MissionFormWidget(QWidget):
         self.driver_combo.currentIndexChanged.connect(self._update_driver_profile)
         self.driver_profile_label = QLabel("پروفایل راننده و خودرو پس از انتخاب راننده نمایش داده می‌شود.")
         self.driver_profile_label.setObjectName("profileInfo")
-        self.driver_profile_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.driver_profile_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.driver_profile_label.setMinimumHeight(FORM_FIELD_HEIGHT)
         self.driver_profile_label.setMaximumHeight(FORM_FIELD_HEIGHT)
         self.date_input = QLineEdit()
@@ -264,12 +264,13 @@ class MissionFormWidget(QWidget):
         if placeholder:
             widget.setPlaceholderText("")
             widget.setPlaceholderText(placeholder)
-        widget.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
     def _prepare_text_area(self, widget: QPlainTextEdit) -> None:
         widget.setObjectName("missionFormInput")
         widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         widget.setAttribute(Qt.WidgetAttribute.WA_RightToLeft, True)
+        widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
         apply_form_field_font(widget)
 
     def _prepare_combo(self, combo: NoWheelComboBox) -> None:
@@ -290,11 +291,13 @@ class MissionFormWidget(QWidget):
         line_edit.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         line_edit.setAttribute(Qt.WidgetAttribute.WA_RightToLeft, True)
         configure_combo_field(combo)
+        line_edit.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
     def _prepare_spin(self, widget: NoWheelDoubleSpinBox) -> None:
         widget.setObjectName("missionFormInput")
         widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         configure_spin_field(widget)
+        widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
     def refresh_combos(self) -> None:
         current_driver = self.driver_combo.currentData()

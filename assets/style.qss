@@ -729,6 +729,7 @@ QWidget#missionFormWidget QLabel#profileInfo {
     background: #FFFFFF;
     border: 1px solid #CBD5E1;
     border-radius: 10px;
+    qproperty-alignment: AlignCenter;
 }
 
 QWidget#missionFormWidget QLineEdit#missionFormInput,
@@ -740,7 +741,7 @@ QWidget#missionFormWidget QComboBox#missionFormInput {
 
 QWidget#missionFormWidget QLineEdit#missionFormInput,
 QWidget#missionFormWidget QDoubleSpinBox#missionFormInput {
-    qproperty-alignment: 'AlignRight | AlignVCenter';
+    qproperty-alignment: AlignCenter;
     padding: 0px 10px;
 }
 
@@ -753,7 +754,7 @@ QWidget#missionFormWidget QComboBox#missionFormInput {
 }
 
 QWidget#missionFormWidget QComboBox#missionFormInput QLineEdit {
-    qproperty-alignment: 'AlignRight | AlignVCenter';
+    qproperty-alignment: AlignCenter;
     background: transparent;
     border: none;
     min-height: 36px;
@@ -763,7 +764,7 @@ QWidget#missionFormWidget QComboBox#missionFormInput QLineEdit {
 
 QWidget#missionFormWidget QDoubleSpinBox#missionFormInput {
     padding-left: 32px;
-    padding-right: 10px;
+    padding-right: 32px;
 }
 
 QWidget#missionFormWidget QDoubleSpinBox#missionFormInput::up-button,
