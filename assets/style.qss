@@ -1562,42 +1562,110 @@ QTabWidget#locationsManageTabs QTabBar::tab:hover:!selected {
 }
 
 QDialog#loginDialog {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #EFF6FF, stop:1 #F8FAFC);
+    background: #FFFFFF;
 }
 
-QFrame#loginCard {
+QFrame#loginFormPanel {
     background: #FFFFFF;
-    border: 1px solid #BFDBFE;
-    border-radius: 18px;
+    border: none;
+}
+
+QFrame#loginBrandPanel {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #1E3A8A, stop:1 #2563EB);
+    border: none;
+}
+
+QLabel#loginBrandLogo {
+    color: #FFFFFF;
+    font-size: 34px;
+    font-weight: 800;
+    background: transparent;
+}
+
+QLabel#loginBrandTagline {
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 14px;
+    font-weight: 600;
+    background: transparent;
+}
+
+QLabel#loginBrandNetwork {
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 13px;
+    font-weight: 600;
+    background: transparent;
+}
+
+QLabel#loginBrandCity {
+    color: #FFFFFF;
+    font-size: 24px;
+    font-weight: 800;
+    background: transparent;
+}
+
+QFrame#loginBrandDecor {
+    background: rgba(255, 255, 255, 0.35);
+    border: none;
+    max-width: 120px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+QLabel#loginBrandCredits {
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 170%;
+    background: transparent;
+    padding-top: 8px;
 }
 
 QLabel#loginTitle {
     color: #1E3A8A;
-    font-size: 22px;
+    font-size: 28px;
     font-weight: 800;
 }
 
 QLabel#loginSubtitle {
     color: #64748B;
+    font-size: 13px;
+    font-weight: 600;
+    padding-top: 4px;
+}
+
+QLabel#loginFieldLabel {
+    color: #0F172A;
     font-size: 12px;
+    font-weight: 700;
+}
+
+QLabel#loginVersionLabel {
+    color: #94A3B8;
+    font-size: 11px;
     font-weight: 600;
 }
 
 QLineEdit#loginInput {
-    min-height: 38px;
-    padding: 0 12px;
+    min-height: 42px;
+    padding: 0 14px;
     border: 1px solid #CBD5E1;
     border-radius: 10px;
     background: #F8FAFC;
+    font-size: 12px;
+}
+
+QLineEdit#loginInput:focus {
+    border: 1px solid #2563EB;
+    background: #FFFFFF;
 }
 
 QPushButton#loginButton {
-    min-height: 42px;
+    min-height: 46px;
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1E3A8A, stop:1 #2563EB);
     color: #FFFFFF;
     border: 1px solid #2563EB;
     border-radius: 10px;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 700;
 }
 

@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog,
     QFrame,
+    QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
@@ -12,7 +13,7 @@ from PySide6.QtWidgets import (
 
 from database.db import DatabaseManager
 from ui.form_widgets import configure_line_edit_field
-from ui.utils import show_error
+from ui.utils import APP_PRODUCT_NAME, APP_VERSION, show_error, to_persian_digits
 
 
 class LoginDialog(QDialog):
@@ -20,68 +21,129 @@ class LoginDialog(QDialog):
         super().__init__(parent)
         self.db = db
         self.user: dict | None = None
-        self.setWindowTitle("ورود به Route")
+        self.setWindowTitle(f"ورود به {APP_PRODUCT_NAME}")
         self.setModal(True)
-        self.setFixedSize(420, 360)
-        self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        self.setFixedSize(860, 500)
         self.setObjectName("loginDialog")
         self._build_ui()
 
     def _build_ui(self) -> None:
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(24, 24, 24, 24)
-        layout.setSpacing(16)
+        root = QHBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+        root.addWidget(self._build_form_panel(), stretch=1)
+        root.addWidget(self._build_brand_panel(), stretch=1)
 
-        card = QFrame()
-        card.setObjectName("loginCard")
-        card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(24, 24, 24, 24)
-        card_layout.setSpacing(14)
+    def _build_form_panel(self) -> QFrame:
+        panel = QFrame()
+        panel.setObjectName("loginFormPanel")
+        panel.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+
+        layout = QVBoxLayout(panel)
+        layout.setContentsMargins(56, 48, 56, 48)
+        layout.setSpacing(0)
+        layout.addStretch(1)
 
         title = QLabel("ورود به سیستم")
         title.setObjectName("loginTitle")
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        subtitle = QLabel("Route v.1 — مدیریت ماموریت خودروها")
+        title.setAlignment(Qt.AlignmentFlag.AlignRight)
+        subtitle = QLabel(f"{APP_PRODUCT_NAME} — مدیریت ماموریت خودروها")
         subtitle.setObjectName("loginSubtitle")
-        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignRight)
 
         self.username_input = QLineEdit()
         self.username_input.setObjectName("loginInput")
-        self.username_input.setPlaceholderText("نام کاربری")
+        self.username_input.setPlaceholderText("نام کاربری را وارد کنید")
         configure_line_edit_field(self.username_input)
 
         self.password_input = QLineEdit()
         self.password_input.setObjectName("loginInput")
-        self.password_input.setPlaceholderText("رمز عبور")
+        self.password_input.setPlaceholderText("رمز عبور را وارد کنید")
         self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
         configure_line_edit_field(self.password_input)
         self.password_input.returnPressed.connect(self._login)
+        self.username_input.returnPressed.connect(self._login)
 
         login_button = QPushButton("ورود")
         login_button.setObjectName("loginButton")
         login_button.setCursor(Qt.CursorShape.PointingHandCursor)
         login_button.clicked.connect(self._login)
-        self.username_input.returnPressed.connect(self._login)
 
-        card_layout.addWidget(title)
-        card_layout.addWidget(subtitle)
-        card_layout.addSpacing(8)
-        card_layout.addWidget(self._field("نام کاربری", self.username_input))
-        card_layout.addWidget(self._field("رمز عبور", self.password_input))
-        card_layout.addSpacing(8)
-        card_layout.addWidget(login_button)
+        version_label = QLabel(f"نسخه {to_persian_digits(APP_VERSION)}")
+        version_label.setObjectName("loginVersionLabel")
+        version_label.setAlignment(Qt.AlignmentFlag.AlignRight)
+
+        layout.addWidget(title)
+        layout.addWidget(subtitle)
+        layout.addSpacing(28)
+        layout.addWidget(self._field("نام کاربری", self.username_input))
+        layout.addSpacing(14)
+        layout.addWidget(self._field("رمز عبور", self.password_input))
+        layout.addSpacing(24)
+        layout.addWidget(login_button)
+        layout.addSpacing(12)
+        layout.addWidget(version_label)
         layout.addStretch(1)
-        layout.addWidget(card)
+        return panel
+
+    def _build_brand_panel(self) -> QFrame:
+        panel = QFrame()
+        panel.setObjectName("loginBrandPanel")
+        panel.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+
+        layout = QVBoxLayout(panel)
+        layout.setContentsMargins(40, 42, 40, 28)
+        layout.setSpacing(10)
+
+        logo = QLabel(APP_PRODUCT_NAME)
+        logo.setObjectName("loginBrandLogo")
+        logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        tagline = QLabel("مدیریت ماموریت خودروها")
+        tagline.setObjectName("loginBrandTagline")
+        tagline.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        network = QLabel("شبکه بهداشت و درمان شهرستان")
+        network.setObjectName("loginBrandNetwork")
+        network.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        network.setWordWrap(True)
+
+        city = QLabel("رودسر")
+        city.setObjectName("loginBrandCity")
+        city.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        decor = QFrame()
+        decor.setObjectName("loginBrandDecor")
+        decor.setFixedHeight(2)
+
         layout.addStretch(1)
+        layout.addWidget(logo)
+        layout.addWidget(tagline)
+        layout.addSpacing(8)
+        layout.addWidget(network)
+        layout.addWidget(city)
+        layout.addSpacing(24)
+        layout.addWidget(decor)
+        layout.addStretch(2)
+
+        credits = QLabel(
+            "توسط صادق جعفری و با همکاری علیرضا محمد رضایی\nطراحی و توسعه داده شده"
+        )
+        credits.setObjectName("loginBrandCredits")
+        credits.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        credits.setWordWrap(True)
+        layout.addWidget(credits)
+        return panel
 
     def _field(self, label: str, widget: QLineEdit) -> QFrame:
         box = QFrame()
         box.setObjectName("loginFieldBox")
+        box.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         field_layout = QVBoxLayout(box)
         field_layout.setContentsMargins(0, 0, 0, 0)
-        field_layout.setSpacing(6)
+        field_layout.setSpacing(8)
         label_widget = QLabel(label)
-        label_widget.setObjectName("fieldLabel")
+        label_widget.setObjectName("loginFieldLabel")
         label_widget.setAlignment(Qt.AlignmentFlag.AlignRight)
         field_layout.addWidget(label_widget)
         field_layout.addWidget(widget)

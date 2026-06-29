@@ -25,6 +25,7 @@ from pages.reports_page import ReportsPage
 from pages.routes_page import RoutesPage
 from pages.users_page import UsersPage
 from ui.utils import (
+    APP_PRODUCT_NAME,
     APP_VERSION,
     current_time_text,
     gregorian_to_jalali,
@@ -38,7 +39,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.db = db
         self.current_user = current_user
-        self.setWindowTitle("Route v.1 - مدیریت ماموریت خودروها")
+        self.setWindowTitle(f"{APP_PRODUCT_NAME} - مدیریت ماموریت خودروها")
         self.setMinimumSize(1180, 760)
         self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.nav_buttons: list[QPushButton] = []
@@ -95,7 +96,7 @@ class MainWindow(QMainWindow):
         header_layout.setContentsMargins(14, 18, 14, 16)
         header_layout.setSpacing(6)
 
-        logo = QLabel("Route v.1")
+        logo = QLabel(APP_PRODUCT_NAME)
         logo.setObjectName("sidebarLogo")
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         subtitle = QLabel("مدیریت ماموریت خودروها")
