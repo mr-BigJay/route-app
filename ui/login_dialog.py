@@ -59,18 +59,18 @@ class LoginDialog(QDialog):
         subtitle.setAlignment(Qt.AlignmentFlag.AlignRight)
         subtitle.setWordWrap(True)
 
-        self.username_input = self._icon_input(
+        self.username_field = self._icon_input(
             "نام کاربری خود را وارد کنید",
             LOGIN_ASSETS / "icon-user.svg",
             password=False,
         )
-        self.password_input = self._icon_input(
+        self.password_field = self._icon_input(
             "رمز عبور خود را وارد کنید",
             LOGIN_ASSETS / "icon-lock.svg",
             password=True,
         )
-        self.password_input.returnPressed.connect(self._login)
-        self.username_input.returnPressed.connect(self._login)
+        self._unwrap_input(self.password_field).returnPressed.connect(self._login)
+        self._unwrap_input(self.username_field).returnPressed.connect(self._login)
 
         login_button = QPushButton("ورود")
         login_button.setObjectName("loginButton")
@@ -90,9 +90,9 @@ class LoginDialog(QDialog):
         content.addSpacing(8)
         content.addWidget(subtitle)
         content.addSpacing(34)
-        content.addWidget(self._field("نام کاربری", self.username_input))
+        content.addWidget(self._field("نام کاربری", self.username_field))
         content.addSpacing(18)
-        content.addWidget(self._field("رمز عبور", self.password_input))
+        content.addWidget(self._field("رمز عبور", self.password_field))
         content.addSpacing(28)
         content.addWidget(login_button)
         content.addSpacing(14)
@@ -168,7 +168,7 @@ class LoginDialog(QDialog):
 
     def _toggle_password_visibility(self) -> None:
         self._password_visible = not self._password_visible
-        password_input = self._unwrap_input(self.password_input)
+        password_input = self._unwrap_input(self.password_field)
         password_input.setEchoMode(
             QLineEdit.EchoMode.Normal if self._password_visible else QLineEdit.EchoMode.Password
         )
@@ -264,16 +264,16 @@ class LoginDialog(QDialog):
         return row_widget
 
     def _login(self) -> None:
-        username = self._unwrap_input(self.username_input).text().strip()
-        password = self._unwrap_input(self.password_input).text()
+        username = self._unwrap_input(self.username_field).text().strip()
+        password = self._unwrap_input(self.password_field).text()
         if not username or not password:
             show_error(self, "نام کاربری و رمز عبور را وارد کنید.")
             return
         user = self.db.authenticate(username, password)
         if not user:
             show_error(self, "نام کاربری یا رمز عبور اشتباه است.")
-            self._unwrap_input(self.password_input).clear()
-            self._unwrap_input(self.password_input).setFocus()
+            self._unwrap_input(self.password_field).clear()
+            self._unwrap_input(self.password_field).setFocus()
             return
         self.user = user
         self.accept()
