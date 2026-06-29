@@ -3,22 +3,63 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="leaflet/leaflet.css" />
+  <script src="leaflet/leaflet.js"></script>
   <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
   <style>
     html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; }
-    .leaflet-container { font-family: Tahoma, sans-serif; }
+    .leaflet-container { font-family: Tahoma, sans-serif; background: #dbeafe; }
+    .marker-origin, .marker-destination, .marker-default {
+      background: transparent;
+      border: none;
+    }
+    .pin-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 3px solid #ffffff;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.35);
+    }
+    .pin-origin .pin-dot { background: #16a34a; }
+    .pin-destination .pin-dot { background: #dc2626; }
+    .pin-default .pin-dot { background: #2563eb; }
+    .pin-label {
+      position: absolute;
+      top: -28px;
+      right: -8px;
+      white-space: nowrap;
+      background: rgba(255, 255, 255, 0.95);
+      color: #0f172a;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+    }
   </style>
 </head>
 <body>
   <div id="map"></div>
   <script>
-    const GILAN = [[36.95, 48.75], [37.75, 50.55]];
+    const GILAN = [[36.55, 48.40], [38.55, 50.45]];
     let bridge = null;
     let map = null;
     let markersLayer = null;
     let routeLayer = null;
+    let mapReady = false;
+    let pendingMarkers = '[]';
+    let pendingRoute = '[]';
+
+    function pinIcon(role) {
+      const cls = role === 'origin' ? 'pin-origin' : role === 'destination' ? 'pin-destination' : 'pin-default';
+      return L.divIcon({
+        className: 'marker-' + (role || 'default'),
+        html: '<div class="' + cls + '"><div class="pin-dot"></div></div>',
+        iconSize: [18, 18],
+        iconAnchor: [9, 9],
+        popupAnchor: [0, -12]
+      });
+    }
 
     function initMap() {
       map = L.map('map', { zoomControl: true }).fitBounds(GILAN);
@@ -33,36 +74,53 @@
           bridge.mapClicked(e.latlng.lat, e.latlng.lng);
         }
       });
+      mapReady = true;
+      setMarkers(pendingMarkers);
+      drawRoute(pendingRoute);
+      setTimeout(function () { map.invalidateSize(); }, 120);
     }
 
     function setMarkers(jsonStr) {
+      pendingMarkers = jsonStr || '[]';
       if (!markersLayer) return;
       markersLayer.clearLayers();
-      const items = JSON.parse(jsonStr || '[]');
+      const items = JSON.parse(pendingMarkers);
       items.forEach(function (m) {
-        const mk = L.marker([m.lat, m.lng]).addTo(markersLayer);
-        if (m.title) mk.bindPopup(m.title);
+        const mk = L.marker([m.lat, m.lng], { icon: pinIcon(m.role || null) }).addTo(markersLayer);
+        const label = m.label || m.title || '';
+        if (label) mk.bindPopup(label);
       });
     }
 
     function drawRoute(jsonStr) {
+      pendingRoute = jsonStr || '[]';
       if (!routeLayer) return;
       routeLayer.clearLayers();
-      const pts = JSON.parse(jsonStr || '[]');
+      const pts = JSON.parse(pendingRoute);
       if (pts.length < 2) return;
       const latlngs = pts.map(function (p) { return [p[0], p[1]]; });
       L.polyline(latlngs, { color: '#2563eb', weight: 5, opacity: 0.85 }).addTo(routeLayer);
-      map.fitBounds(latlngs, { padding: [40, 40] });
+      map.fitBounds(latlngs, { padding: [48, 48] });
     }
 
     function clearRoute() {
+      pendingRoute = '[]';
       if (routeLayer) routeLayer.clearLayers();
     }
 
-    new QWebChannel(qt.webChannelTransport, function (channel) {
-      bridge = channel.objects.bridge;
+    function notifyReady() {
+      if (bridge && bridge.mapReady) bridge.mapReady();
+    }
+
+    if (typeof qt !== 'undefined') {
+      new QWebChannel(qt.webChannelTransport, function (channel) {
+        bridge = channel.objects.bridge;
+        initMap();
+        notifyReady();
+      });
+    } else {
       initMap();
-    });
+    }
   </script>
 </body>
 </html>

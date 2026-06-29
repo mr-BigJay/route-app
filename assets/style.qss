@@ -267,6 +267,13 @@ QLabel#routeModeHint {
     font-size: 12px;
 }
 
+QPushButton[pinTarget][active="true"] {
+    background: #DBEAFE;
+    color: #1E3A8A;
+    border: 1px solid #2563EB;
+    font-weight: 700;
+}
+
 QWidget#routeMapWidget,
 QGraphicsView#routeMapCanvas,
 QWebEngineView#routeMapWeb {
