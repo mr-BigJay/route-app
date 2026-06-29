@@ -42,8 +42,10 @@ class RoutesPage(Page):
         body = QHBoxLayout()
         body.setDirection(QHBoxLayout.Direction.RightToLeft)
         body.setSpacing(16)
-        body.addWidget(self._map_card(), stretch=7)
-        body.addWidget(self._panel_card(), stretch=3)
+        panel = self._panel_card()
+        map_card = self._map_card()
+        body.addWidget(map_card, stretch=7)
+        body.addWidget(panel, stretch=3)
         self.root_layout.addLayout(body, stretch=1)
         self._center_page_header()
 

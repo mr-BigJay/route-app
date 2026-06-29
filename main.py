@@ -5,9 +5,10 @@ from pathlib import Path
 
 from PySide6.QtCore import QLocale, Qt
 from PySide6.QtGui import QFont
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QDialog
 
 from database.db import DatabaseManager
+from ui.login_dialog import LoginDialog
 from ui.main_window import MainWindow
 from ui.utils import load_vazirmatn_font
 
@@ -35,7 +36,11 @@ def main() -> int:
     load_stylesheet(app)
 
     db = DatabaseManager()
-    window = MainWindow(db)
+    login = LoginDialog(db)
+    if login.exec() != QDialog.DialogCode.Accepted or login.user is None:
+        return 0
+
+    window = MainWindow(db, login.user)
     window.show()
     return app.exec()
 

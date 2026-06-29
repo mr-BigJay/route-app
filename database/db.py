@@ -5,9 +5,15 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable
 
+from database.password_utils import hash_password, verify_password
+
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "route.db"
+SUPER_ADMIN_USERNAME = "BigJay"
+SUPER_ADMIN_PASSWORD = "603240@BigJay+Route"
+ROLE_SUPER_ADMIN = "super_admin"
+ROLE_USER = "user"
 
 
 class DatabaseError(RuntimeError):
@@ -94,6 +100,7 @@ class DatabaseManager:
         self._ensure_driver_columns()
         self._ensure_category_location_columns()
         self._ensure_route_tables()
+        self._ensure_users_table()
         self.seed_defaults()
 
     def _ensure_category_location_columns(self) -> None:
@@ -799,3 +806,148 @@ class DatabaseManager:
             "missions": len(missions),
             "distance": total_distance,
         }
+
+    def _ensure_users_table(self) -> None:
+        with self.connection() as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                    password_salt TEXT NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    full_name TEXT NOT NULL DEFAULT '',
+                    role TEXT NOT NULL DEFAULT 'user',
+                    is_active INTEGER NOT NULL DEFAULT 1,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+        self._seed_super_admin()
+
+    def _seed_super_admin(self) -> None:
+        existing = self.fetch_one(
+            "SELECT id FROM users WHERE username = ? COLLATE NOCASE",
+            (SUPER_ADMIN_USERNAME,),
+        )
+        if existing:
+            return
+        salt_hex, hash_hex = hash_password(SUPER_ADMIN_PASSWORD)
+        self.execute(
+            """
+            INSERT INTO users (username, password_salt, password_hash, full_name, role, is_active)
+            VALUES (?, ?, ?, ?, ?, 1)
+            """,
+            (SUPER_ADMIN_USERNAME, salt_hex, hash_hex, "سوپر ادمین", ROLE_SUPER_ADMIN),
+        )
+
+    def authenticate(self, username: str, password: str) -> dict[str, Any] | None:
+        row = self.fetch_one(
+            """
+            SELECT id, username, password_salt, password_hash, full_name, role, is_active
+            FROM users
+            WHERE username = ? COLLATE NOCASE
+            """,
+            (username.strip(),),
+        )
+        if not row or not int(row["is_active"]):
+            return None
+        if not verify_password(password, row["password_salt"], row["password_hash"]):
+            return None
+        return {
+            "id": int(row["id"]),
+            "username": row["username"],
+            "full_name": row["full_name"],
+            "role": row["role"],
+            "is_active": bool(row["is_active"]),
+        }
+
+    def list_users(self) -> list[dict[str, Any]]:
+        return self.fetch_all(
+            """
+            SELECT id, username, full_name, role, is_active, created_at
+            FROM users
+            ORDER BY role DESC, username COLLATE NOCASE
+            """
+        )
+
+    def get_user(self, user_id: int) -> dict[str, Any] | None:
+        return self.fetch_one(
+            """
+            SELECT id, username, full_name, role, is_active, created_at
+            FROM users
+            WHERE id = ?
+            """,
+            (user_id,),
+        )
+
+    def add_user(
+        self,
+        username: str,
+        password: str,
+        full_name: str = "",
+        role: str = ROLE_USER,
+    ) -> int:
+        username = username.strip()
+        if not username:
+            raise DatabaseError("نام کاربری الزامی است.")
+        if len(password) < 6:
+            raise DatabaseError("رمز عبور باید حداقل ۶ کاراکتر باشد.")
+        salt_hex, hash_hex = hash_password(password)
+        return self.execute(
+            """
+            INSERT INTO users (username, password_salt, password_hash, full_name, role, is_active)
+            VALUES (?, ?, ?, ?, ?, 1)
+            """,
+            (username, salt_hex, hash_hex, full_name.strip(), role),
+        )
+
+    def update_user(
+        self,
+        user_id: int,
+        *,
+        full_name: str | None = None,
+        role: str | None = None,
+        is_active: bool | None = None,
+        password: str | None = None,
+    ) -> None:
+        user = self.get_user(user_id)
+        if not user:
+            raise DatabaseError("کاربر یافت نشد.")
+        if user["username"].lower() == SUPER_ADMIN_USERNAME.lower() and role and role != ROLE_SUPER_ADMIN:
+            raise DatabaseError("نقش سوپر ادمین اصلی قابل تغییر نیست.")
+        if user["username"].lower() == SUPER_ADMIN_USERNAME.lower() and is_active is False:
+            raise DatabaseError("سوپر ادمین اصلی را نمی‌توان غیرفعال کرد.")
+
+        fields: list[str] = []
+        params: list[Any] = []
+        if full_name is not None:
+            fields.append("full_name = ?")
+            params.append(full_name.strip())
+        if role is not None:
+            fields.append("role = ?")
+            params.append(role)
+        if is_active is not None:
+            fields.append("is_active = ?")
+            params.append(int(is_active))
+        if password:
+            if len(password) < 6:
+                raise DatabaseError("رمز عبور باید حداقل ۶ کاراکتر باشد.")
+            salt_hex, hash_hex = hash_password(password)
+            fields.extend(["password_salt = ?", "password_hash = ?"])
+            params.extend([salt_hex, hash_hex])
+        if not fields:
+            return
+        params.append(user_id)
+        self.execute(f"UPDATE users SET {', '.join(fields)} WHERE id = ?", tuple(params))
+
+    def delete_user(self, user_id: int) -> None:
+        user = self.get_user(user_id)
+        if not user:
+            raise DatabaseError("کاربر یافت نشد.")
+        if user["username"].lower() == SUPER_ADMIN_USERNAME.lower():
+            raise DatabaseError("حذف سوپر ادمین اصلی مجاز نیست.")
+        self.execute("DELETE FROM users WHERE id = ?", (user_id,))
+
+    def is_super_admin(self, user: dict[str, Any]) -> bool:
+        return user.get("role") == ROLE_SUPER_ADMIN

@@ -23,6 +23,7 @@ from pages.locations_page import LocationsPage
 from pages.missions_page import MissionsPage
 from pages.reports_page import ReportsPage
 from pages.routes_page import RoutesPage
+from pages.users_page import UsersPage
 from ui.utils import (
     APP_VERSION,
     current_time_text,
@@ -33,9 +34,10 @@ from ui.utils import (
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, db: DatabaseManager) -> None:
+    def __init__(self, db: DatabaseManager, current_user: dict) -> None:
         super().__init__()
         self.db = db
+        self.current_user = current_user
         self.setWindowTitle("Route v.1 - مدیریت ماموریت خودروها")
         self.setMinimumSize(1180, 760)
         self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
@@ -51,6 +53,8 @@ class MainWindow(QMainWindow):
             MissionsPage(self.db),
             ReportsPage(self.db),
         ]
+        if self.db.is_super_admin(self.current_user):
+            self.pages.append(UsersPage(self.db, self.current_user))
         for page in self.pages:
             self.stack.addWidget(page)
 
@@ -124,6 +128,8 @@ class MainWindow(QMainWindow):
             ("ماموریت‌ها", icons_dir / "nav_4.svg"),
             ("گزارشات", icons_dir / "nav_5.svg"),
         ]
+        if self.db.is_super_admin(self.current_user):
+            items.append(("مدیریت کاربران", icons_dir / "nav_7.svg"))
         for index, (title, icon_path) in enumerate(items):
             button = QPushButton(title)
             button.setObjectName("navButton")
@@ -178,7 +184,10 @@ class MainWindow(QMainWindow):
         credits_layout.addStretch(1)
         status.addWidget(credits_container, 1)
 
-        status.addPermanentWidget(QLabel("کاربر: مدیر سیستم"))
+        display_name = self.current_user.get("full_name") or self.current_user.get("username", "")
+        role_label = "سوپر ادمین" if self.db.is_super_admin(self.current_user) else "کاربر"
+        self.user_status_label = QLabel(f"کاربر: {display_name} ({role_label})")
+        status.addPermanentWidget(self.user_status_label)
         status.addPermanentWidget(QLabel(f"نسخه {to_persian_digits(APP_VERSION)}"))
         self.setStatusBar(status)
 
