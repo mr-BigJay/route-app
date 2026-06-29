@@ -1571,99 +1571,116 @@ QFrame#loginFormPanel {
 }
 
 QFrame#loginBrandPanel {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #1E3A8A, stop:1 #2563EB);
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #1D4ED8, stop:0.45 #2563EB, stop:1 #1E3A8A);
     border: none;
+}
+
+QLabel#loginBrandPinLogo {
+    background: transparent;
 }
 
 QLabel#loginBrandLogo {
     color: #FFFFFF;
-    font-size: 34px;
+    font-size: 30px;
     font-weight: 800;
     background: transparent;
-}
-
-QLabel#loginBrandTagline {
-    color: rgba(255, 255, 255, 0.88);
-    font-size: 14px;
-    font-weight: 600;
-    background: transparent;
+    letter-spacing: 0.5px;
 }
 
 QLabel#loginBrandNetwork {
-    color: rgba(255, 255, 255, 0.82);
-    font-size: 13px;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 14px;
     font-weight: 600;
     background: transparent;
+    padding: 0 12px;
 }
 
-QLabel#loginBrandCity {
-    color: #FFFFFF;
-    font-size: 24px;
-    font-weight: 800;
+QWidget#loginBrandSeparator {
     background: transparent;
 }
 
-QFrame#loginBrandDecor {
-    background: rgba(255, 255, 255, 0.35);
+QFrame#loginBrandSeparatorLine {
+    background: rgba(255, 255, 255, 0.45);
     border: none;
-    max-width: 120px;
-    margin-left: auto;
-    margin-right: auto;
+    max-height: 1px;
+}
+
+QLabel#loginBrandSeparatorDot {
+    background: #FFFFFF;
+    border-radius: 4px;
+}
+
+QLabel#loginBrandMap {
+    background: transparent;
 }
 
 QLabel#loginBrandCredits {
     color: rgba(255, 255, 255, 0.78);
     font-size: 11px;
     font-weight: 600;
-    line-height: 170%;
+    line-height: 165%;
     background: transparent;
-    padding-top: 8px;
 }
 
 QLabel#loginTitle {
     color: #1E3A8A;
-    font-size: 28px;
+    font-size: 30px;
     font-weight: 800;
 }
 
 QLabel#loginSubtitle {
     color: #64748B;
     font-size: 13px;
-    font-weight: 600;
-    padding-top: 4px;
+    font-weight: 500;
 }
 
 QLabel#loginFieldLabel {
-    color: #0F172A;
+    color: #334155;
     font-size: 12px;
     font-weight: 700;
 }
 
-QLabel#loginVersionLabel {
-    color: #94A3B8;
-    font-size: 11px;
-    font-weight: 600;
+QFrame#loginInputWrap {
+    background: #FFFFFF;
+    border: 1px solid #CBD5E1;
+    border-radius: 10px;
+    min-height: 46px;
+    max-height: 46px;
+}
+
+QFrame#loginInputWrap:focus-within {
+    border: 1px solid #2563EB;
 }
 
 QLineEdit#loginInput {
+    background: transparent;
+    border: none;
     min-height: 42px;
-    padding: 0 14px;
-    border: 1px solid #CBD5E1;
-    border-radius: 10px;
-    background: #F8FAFC;
+    padding: 0 4px;
+    color: #0F172A;
     font-size: 12px;
+    qproperty-alignment: 'AlignRight | AlignVCenter';
 }
 
-QLineEdit#loginInput:focus {
-    border: 1px solid #2563EB;
-    background: #FFFFFF;
+QLineEdit#loginInput::placeholder {
+    color: #94A3B8;
+}
+
+QLabel#loginInputIcon {
+    background: transparent;
+}
+
+QToolButton#loginEyeButton {
+    background: transparent;
+    border: none;
+    padding: 0;
 }
 
 QPushButton#loginButton {
-    min-height: 46px;
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1E3A8A, stop:1 #2563EB);
+    min-height: 48px;
+    background: #2563EB;
     color: #FFFFFF;
-    border: 1px solid #2563EB;
+    border: none;
     border-radius: 10px;
     font-size: 15px;
     font-weight: 700;
@@ -1671,6 +1688,34 @@ QPushButton#loginButton {
 
 QPushButton#loginButton:hover {
     background: #1D4ED8;
+}
+
+QPushButton#loginForgotLink {
+    background: transparent;
+    color: #2563EB;
+    border: none;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 8px;
+}
+
+QPushButton#loginForgotLink:hover {
+    color: #1D4ED8;
+}
+
+QFrame#loginFooterLine {
+    background: #E2E8F0;
+    border: none;
+}
+
+QLabel#loginFooterText {
+    color: #94A3B8;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+QLabel#loginFooterLogo {
+    background: transparent;
 }
 
 QWidget#usersPage QLabel#pageTitle,
