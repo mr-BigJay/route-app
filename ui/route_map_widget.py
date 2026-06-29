@@ -8,7 +8,6 @@ from pathlib import Path
 from PySide6.QtCore import QObject, QPointF, QRectF, Qt, QUrl, Signal, Slot
 from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPen
 from PySide6.QtWidgets import (
-    QGraphicsEllipseItem,
     QGraphicsLineItem,
     QGraphicsScene,
     QGraphicsTextItem,
@@ -36,11 +35,16 @@ class _MapBridge(QObject):
     """Qt WebChannel bridge for Leaflet map (QObject avoids QWidget property warnings)."""
 
     map_clicked = Signal(float, float)
+    map_right_clicked = Signal(float, float)
     map_ready = Signal()
 
     @Slot(float, float)
     def mapClicked(self, lat: float, lng: float) -> None:
         self.map_clicked.emit(float(lat), float(lng))
+
+    @Slot(float, float)
+    def mapRightClicked(self, lat: float, lng: float) -> None:
+        self.map_right_clicked.emit(float(lat), float(lng))
 
     @Slot()
     def mapReady(self) -> None:
@@ -51,6 +55,7 @@ class CanvasRouteMap(QGraphicsView):
     """Offline canvas map when WebEngine is unavailable."""
 
     map_clicked = Signal(float, float)
+    map_right_clicked = Signal(float, float)
     map_ready = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -136,6 +141,15 @@ class CanvasRouteMap(QGraphicsView):
         self._press_pos = None
         super().mouseReleaseEvent(event)
 
+    def contextMenuEvent(self, event) -> None:
+        pt = self.mapToScene(event.pos())
+        if self._scene_rect.contains(pt):
+            lat, lng = self._scene_to_lat_lng(pt)
+            self.map_right_clicked.emit(lat, lng)
+            event.accept()
+            return
+        super().contextMenuEvent(event)
+
     def set_markers(self, markers: list[dict]) -> None:
         self._markers = list(markers)
         self._redraw()
@@ -155,19 +169,23 @@ class CanvasRouteMap(QGraphicsView):
             return QColor("#dc2626")
         return QColor("#2563eb")
 
+    def _pin_item(self, pt: QPointF, role: str | None) -> QGraphicsTextItem:
+        pin = QGraphicsTextItem("📍")
+        pin.setDefaultTextColor(self._marker_color(role))
+        pin.setFont(QFont("Segoe UI Emoji", 16))
+        pin.setPos(pt.x() - 10, pt.y() - 22)
+        pin._route_item = True  # type: ignore[attr-defined]
+        pin.setZValue(10)
+        return pin
+
     def _redraw(self) -> None:
         for item in list(self._scene.items()):
             if getattr(item, "_route_item", False):
                 self._scene.removeItem(item)
         for marker in self._markers:
             pt = self._lat_lng_to_scene(float(marker["lat"]), float(marker["lng"]))
-            color = self._marker_color(marker.get("role"))
-            dot = QGraphicsEllipseItem(pt.x() - 8, pt.y() - 8, 16, 16)
-            dot.setBrush(QBrush(color))
-            dot.setPen(QPen(QColor("#ffffff"), 2))
-            dot._route_item = True  # type: ignore[attr-defined]
-            dot.setZValue(10)
-            self._scene.addItem(dot)
+            pin = self._pin_item(pt, marker.get("role"))
+            self._scene.addItem(pin)
             label_text = str(marker.get("label") or marker.get("title") or "")
             if label_text:
                 label = QGraphicsTextItem(label_text)
@@ -196,6 +214,7 @@ if _webengine_available():
 
     class WebEngineRouteMap(QWebEngineView):
         map_clicked = Signal(float, float)
+        map_right_clicked = Signal(float, float)
         map_ready = Signal()
 
         def __init__(self, parent: QWidget | None = None) -> None:
@@ -207,6 +226,7 @@ if _webengine_available():
             settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)
             self._bridge = _MapBridge(self)
             self._bridge.map_clicked.connect(self.map_clicked)
+            self._bridge.map_right_clicked.connect(self.map_right_clicked)
             self._bridge.map_ready.connect(self._on_bridge_ready)
             channel = QWebChannel(self.page())
             channel.registerObject("bridge", self._bridge)
@@ -272,6 +292,7 @@ class RouteMapWidget(QWidget):
     """Map container; picks WebEngine or canvas automatically."""
 
     map_clicked = Signal(float, float)
+    map_right_clicked = Signal(float, float)
     map_ready = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -281,6 +302,7 @@ class RouteMapWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         self._map = _create_map_widget(self)
         self._map.map_clicked.connect(self.map_clicked)
+        self._map.map_right_clicked.connect(self.map_right_clicked)
         if hasattr(self._map, "map_ready"):
             self._map.map_ready.connect(self.map_ready)
         layout.addWidget(self._map)

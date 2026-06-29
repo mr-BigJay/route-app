@@ -244,6 +244,17 @@ QFrame#routePanelCard {
     border-radius: 18px;
 }
 
+QWidget#routePanelInner {
+    max-width: 360px;
+}
+
+QLabel#routeCoordsLabel {
+    color: #0F172A;
+    font-size: 10px;
+    font-weight: 700;
+    min-height: 18px;
+}
+
 QFrame#routeMapCard QLabel#sectionTitle,
 QFrame#routePanelCard QLabel#sectionTitle {
     color: #1E3A8A;

@@ -3,12 +3,14 @@ from __future__ import annotations
 from enum import Enum
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QAction, QCursor
 from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFrame,
     QGridLayout,
     QHBoxLayout,
     QLabel,
+    QMenu,
     QProgressBar,
     QPushButton,
     QVBoxLayout,
@@ -93,6 +95,7 @@ class RoutesPage(Page):
         self.map_widget = RouteMapWidget()
         self.map_widget.setMinimumHeight(420)
         self.map_widget.map_clicked.connect(self._on_map_clicked)
+        self.map_widget.map_right_clicked.connect(self._on_map_right_clicked)
         self.map_widget.map_ready.connect(self._on_map_ready)
         layout.addLayout(header)
         layout.addWidget(self.map_hint)
@@ -102,12 +105,26 @@ class RoutesPage(Page):
     def _panel_card(self) -> QWidget:
         card = self.card()
         card.setObjectName("routePanelCard")
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(12, 10, 12, 10)
-        layout.setSpacing(6)
+        outer = QVBoxLayout(card)
+        outer.setContentsMargins(12, 10, 12, 10)
+        outer.setSpacing(8)
 
-        origin_title = QLabel("مبدا (A)")
-        origin_title.setObjectName("routeSectionTitle")
+        inner = QWidget()
+        inner.setObjectName("routePanelInner")
+        grid = QGridLayout(inner)
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setHorizontalSpacing(10)
+        grid.setVerticalSpacing(4)
+
+        origin_header = QLabel("مبدا")
+        origin_header.setObjectName("routeSectionTitle")
+        origin_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        destination_header = QLabel("مقصد")
+        destination_header.setObjectName("routeSectionTitle")
+        destination_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        grid.addWidget(origin_header, 0, 0)
+        grid.addWidget(destination_header, 0, 1)
+
         self.origin_category_combo = self._category_combo()
         self.origin_location_combo = self._location_combo()
         self.origin_category_combo.currentIndexChanged.connect(
@@ -116,8 +133,6 @@ class RoutesPage(Page):
         self.origin_location_combo.currentIndexChanged.connect(self._on_endpoint_changed)
         self.origin_category_combo.currentIndexChanged.connect(self._on_endpoint_changed)
 
-        destination_title = QLabel("مقصد (B)")
-        destination_title.setObjectName("routeSectionTitle")
         self.destination_category_combo = self._category_combo()
         self.destination_location_combo = self._location_combo()
         self.destination_category_combo.currentIndexChanged.connect(
@@ -126,6 +141,20 @@ class RoutesPage(Page):
         self.destination_location_combo.currentIndexChanged.connect(self._on_endpoint_changed)
         self.destination_category_combo.currentIndexChanged.connect(self._on_endpoint_changed)
 
+        grid.addLayout(self._compact_field("دسته", self.origin_category_combo), 1, 0)
+        grid.addLayout(self._compact_field("دسته", self.destination_category_combo), 1, 1)
+        grid.addLayout(self._compact_field("نقطه", self.origin_location_combo), 2, 0)
+        grid.addLayout(self._compact_field("نقطه", self.destination_location_combo), 2, 1)
+
+        self.origin_coords_label = QLabel("—")
+        self.origin_coords_label.setObjectName("routeCoordsLabel")
+        self.origin_coords_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.destination_coords_label = QLabel("—")
+        self.destination_coords_label.setObjectName("routeCoordsLabel")
+        self.destination_coords_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        grid.addLayout(self._compact_field("موقعیت", self.origin_coords_label), 3, 0)
+        grid.addLayout(self._compact_field("موقعیت", self.destination_coords_label), 3, 1)
+
         pin_buttons = QHBoxLayout()
         pin_buttons.setSpacing(6)
         self.origin_pin_button = self._pin_button("پین مبدا", PinTarget.ORIGIN)
@@ -133,8 +162,15 @@ class RoutesPage(Page):
         pin_buttons.addWidget(self.origin_pin_button)
         pin_buttons.addWidget(self.destination_pin_button)
 
+        pin_row = QWidget()
+        pin_row.setLayout(pin_buttons)
+        grid.addWidget(pin_row, 4, 0, 1, 2)
+
+        outer.addWidget(inner, alignment=Qt.AlignmentFlag.AlignHCenter)
+
         route_title = QLabel("مسافت")
         route_title.setObjectName("routeSectionTitle")
+        route_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.distance_input = QDoubleSpinBox()
         self.distance_input.setObjectName("routeCompactSpin")
         configure_spin_field(self.distance_input)
@@ -144,9 +180,11 @@ class RoutesPage(Page):
         self.distance_input.setReadOnly(True)
         self.distance_input.setButtonSymbols(QDoubleSpinBox.ButtonSymbols.NoButtons)
         self.distance_input.setFixedHeight(30)
+        self.distance_input.setFixedWidth(160)
         self.route_mode_label = QLabel("")
         self.route_mode_label.setObjectName("routeModeHint")
         self.route_mode_label.setWordWrap(True)
+        self.route_mode_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         action_row = QHBoxLayout()
         action_row.setSpacing(6)
@@ -157,15 +195,10 @@ class RoutesPage(Page):
         action_row.addWidget(self.calc_button)
         action_row.addWidget(self.cache_button)
 
-        layout.addWidget(origin_title)
-        layout.addLayout(self._compact_endpoint_row("دسته", self.origin_category_combo, "نقطه", self.origin_location_combo))
-        layout.addWidget(destination_title)
-        layout.addLayout(self._compact_endpoint_row("دسته", self.destination_category_combo, "نقطه", self.destination_location_combo))
-        layout.addLayout(pin_buttons)
-        layout.addWidget(route_title)
-        layout.addWidget(self.distance_input)
-        layout.addLayout(action_row)
-        layout.addWidget(self.route_mode_label)
+        outer.addWidget(route_title, alignment=Qt.AlignmentFlag.AlignHCenter)
+        outer.addWidget(self.distance_input, alignment=Qt.AlignmentFlag.AlignHCenter)
+        outer.addLayout(action_row)
+        outer.addWidget(self.route_mode_label, alignment=Qt.AlignmentFlag.AlignHCenter)
         self._update_pin_buttons()
         return card
 
@@ -202,19 +235,6 @@ class RoutesPage(Page):
         layout.addWidget(self.batch_status_label)
         layout.addLayout(batch_buttons)
         return card
-
-    def _compact_endpoint_row(
-        self,
-        cat_label: str,
-        cat_combo: NoWheelComboBox,
-        loc_label: str,
-        loc_combo: NoWheelComboBox,
-    ) -> QHBoxLayout:
-        row = QHBoxLayout()
-        row.setSpacing(6)
-        row.addLayout(self._compact_field(cat_label, cat_combo), stretch=1)
-        row.addLayout(self._compact_field(loc_label, loc_combo), stretch=1)
-        return row
 
     def _compact_field(self, label: str, widget: QWidget) -> QVBoxLayout:
         box = QVBoxLayout()
@@ -274,9 +294,27 @@ class RoutesPage(Page):
     def _pin_hint_text(self) -> str:
         if self._pin_target == PinTarget.ORIGIN:
             point = self._selected_location_title(self.origin_category_combo, self.origin_location_combo)
-            return f"مبدا (A) فعال — «{point}» را انتخاب کنید و روی نقشه کلیک کنید."
+            return f"مبدا فعال — «{point}» را انتخاب کنید؛ کلیک چپ یا راست‌کلیک روی نقشه."
         point = self._selected_location_title(self.destination_category_combo, self.destination_location_combo)
-        return f"مقصد (B) فعال — «{point}» را انتخاب کنید و روی نقشه کلیک کنید."
+        return f"مقصد فعال — «{point}» را انتخاب کنید؛ کلیک چپ یا راست‌کلیک روی نقشه."
+
+    def _coords_text(self, location: dict | None) -> str:
+        if not location or location["latitude"] is None or location["longitude"] is None:
+            return "—"
+        lat = float(location["latitude"])
+        lng = float(location["longitude"])
+        return to_persian_digits(f"{lat:.4f}، {lng:.4f}")
+
+    def _update_coord_labels(self) -> None:
+        origin_id = self._location_id_from_combos(self.origin_category_combo, self.origin_location_combo)
+        destination_id = self._location_id_from_combos(
+            self.destination_category_combo,
+            self.destination_location_combo,
+        )
+        origin = self.db.get_location(int(origin_id)) if origin_id else None
+        destination = self.db.get_location(int(destination_id)) if destination_id else None
+        self.origin_coords_label.setText(self._coords_text(origin))
+        self.destination_coords_label.setText(self._coords_text(destination))
 
     def _selected_location_title(
         self,
@@ -339,9 +377,9 @@ class RoutesPage(Page):
             self.destination_location_combo,
         )
         markers: list[dict] = []
-        for location_id, role, prefix in (
-            (origin_id, "origin", "A"),
-            (destination_id, "destination", "B"),
+        for location_id, role in (
+            (origin_id, "origin"),
+            (destination_id, "destination"),
         ):
             if not location_id:
                 continue
@@ -352,7 +390,7 @@ class RoutesPage(Page):
                 {
                     "id": int(location_id),
                     "title": location["title"],
-                    "label": f"{prefix} — {location['title']}",
+                    "label": location["title"],
                     "lat": float(location["latitude"]),
                     "lng": float(location["longitude"]),
                     "role": role,
@@ -368,6 +406,7 @@ class RoutesPage(Page):
 
     def _on_endpoint_changed(self) -> None:
         self.map_hint.setText(self._pin_hint_text())
+        self._update_coord_labels()
         self._update_map_markers()
         self._try_auto_calculate()
 
@@ -387,6 +426,7 @@ class RoutesPage(Page):
         self._populate_location_combo(self.destination_category_combo, self.destination_location_combo)
         self._update_map_mode_label()
         self._update_map_markers()
+        self._update_coord_labels()
         self._refresh_stats()
         self.map_hint.setText(self._pin_hint_text())
         self._try_auto_calculate()
@@ -407,8 +447,15 @@ class RoutesPage(Page):
                 index,
             )
 
-    def _on_map_clicked(self, latitude: float, longitude: float) -> None:
-        if self._pin_target == PinTarget.ORIGIN:
+    def _save_coords_for_endpoint(
+        self,
+        target: PinTarget,
+        latitude: float,
+        longitude: float,
+        *,
+        advance_pin: bool = False,
+    ) -> None:
+        if target == PinTarget.ORIGIN:
             category_combo = self.origin_category_combo
             location_combo = self.origin_location_combo
             label = "مبدا"
@@ -429,13 +476,32 @@ class RoutesPage(Page):
             show_error(self, str(exc))
             return
 
-        show_success(self, f"موقعیت {label} «{location_combo.currentText()}» ثبت شد. مسیرهای مرتبط از کش حذف شدند.")
+        show_success(
+            self,
+            f"موقعیت {label} «{location_combo.currentText()}» ثبت شد. مسیرهای مرتبط از کش حذف شدند.",
+        )
+        self._update_coord_labels()
         self._update_map_markers()
         self._refresh_stats()
 
-        if self._pin_target == PinTarget.ORIGIN:
+        if advance_pin and target == PinTarget.ORIGIN:
             self._set_pin_target(PinTarget.DESTINATION)
         self._try_auto_calculate(force=True)
+
+    def _on_map_clicked(self, latitude: float, longitude: float) -> None:
+        self._save_coords_for_endpoint(self._pin_target, latitude, longitude, advance_pin=True)
+
+    def _on_map_right_clicked(self, latitude: float, longitude: float) -> None:
+        menu = QMenu(self)
+        origin_action = QAction("ثبت موقعیت مبدا", self)
+        destination_action = QAction("ثبت موقعیت مقصد", self)
+        menu.addAction(origin_action)
+        menu.addAction(destination_action)
+        chosen = menu.exec(QCursor.pos())
+        if chosen == origin_action:
+            self._save_coords_for_endpoint(PinTarget.ORIGIN, latitude, longitude)
+        elif chosen == destination_action:
+            self._save_coords_for_endpoint(PinTarget.DESTINATION, latitude, longitude)
 
     def _try_auto_calculate(self, *, force: bool = False) -> None:
         origin_id = self._location_id_from_combos(self.origin_category_combo, self.origin_location_combo)
@@ -503,6 +569,7 @@ class RoutesPage(Page):
         self.map_widget.draw_route([(float(p[0]), float(p[1])) for p in points])
         self.distance_input.setValue(round(float(result["distance_km"]), 1))
         self._update_map_markers()
+        self._update_coord_labels()
         mode = str(result.get("mode") or "cached")
         self.route_mode_label.setText(MODE_LABELS.get(mode, mode))
         self._refresh_stats()

@@ -10,20 +10,18 @@
     html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; }
     .leaflet-container { font-family: Tahoma, sans-serif; background: #dbeafe; }
     .leaflet-control-attribution { display: none !important; }
-    .marker-origin, .marker-destination, .marker-default {
+    .marker-pin {
       background: transparent;
       border: none;
     }
-    .pin-dot {
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      border: 3px solid #ffffff;
-      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.35);
+    .pin-emoji {
+      font-size: 22px;
+      line-height: 1;
+      text-shadow: 0 1px 3px rgba(255, 255, 255, 0.95);
     }
-    .pin-origin .pin-dot { background: #16a34a; }
-    .pin-destination .pin-dot { background: #dc2626; }
-    .pin-default .pin-dot { background: #2563eb; }
+    .pin-origin { color: #16a34a; }
+    .pin-destination { color: #dc2626; }
+    .pin-default { color: #2563eb; }
   </style>
 </head>
 <body>
@@ -41,11 +39,11 @@
     function pinIcon(role) {
       const cls = role === 'origin' ? 'pin-origin' : role === 'destination' ? 'pin-destination' : 'pin-default';
       return L.divIcon({
-        className: 'marker-' + (role || 'default'),
-        html: '<div class="' + cls + '"><div class="pin-dot"></div></div>',
-        iconSize: [18, 18],
-        iconAnchor: [9, 9],
-        popupAnchor: [0, -12]
+        className: 'marker-pin',
+        html: '<div class="pin-emoji ' + cls + '">📍</div>',
+        iconSize: [24, 24],
+        iconAnchor: [12, 22],
+        popupAnchor: [0, -22]
       });
     }
 
@@ -68,6 +66,12 @@
       map.on('click', function (e) {
         if (bridge && bridge.mapClicked) {
           bridge.mapClicked(e.latlng.lat, e.latlng.lng);
+        }
+      });
+      map.on('contextmenu', function (e) {
+        L.DomEvent.preventDefault(e);
+        if (bridge && bridge.mapRightClicked) {
+          bridge.mapRightClicked(e.latlng.lat, e.latlng.lng);
         }
       });
       setMarkers(pendingMarkers);
