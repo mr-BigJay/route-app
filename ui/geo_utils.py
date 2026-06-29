@@ -13,12 +13,31 @@ GILAN_BOUNDS = {
     "lng_max": 50.45,
 }
 
+# شهرستان رودسر — محدوده نقشه مدیریت مسیر
+RUDSAR_BOUNDS = {
+    "lat_min": 36.98,
+    "lat_max": 37.22,
+    "lng_min": 50.12,
+    "lng_max": 50.52,
+}
+
+RUDSAR_CENTER = {
+    "lat": 37.137,
+    "lng": 50.288,
+}
+
 EARTH_RADIUS_KM = 6371.0
 
 
 def clamp_to_gilan(latitude: float, longitude: float) -> tuple[float, float]:
     latitude = max(GILAN_BOUNDS["lat_min"], min(GILAN_BOUNDS["lat_max"], latitude))
     longitude = max(GILAN_BOUNDS["lng_min"], min(GILAN_BOUNDS["lng_max"], longitude))
+    return latitude, longitude
+
+
+def clamp_to_rudsar(latitude: float, longitude: float) -> tuple[float, float]:
+    latitude = max(RUDSAR_BOUNDS["lat_min"], min(RUDSAR_BOUNDS["lat_max"], latitude))
+    longitude = max(RUDSAR_BOUNDS["lng_min"], min(RUDSAR_BOUNDS["lng_max"], longitude))
     return latitude, longitude
 
 

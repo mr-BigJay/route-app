@@ -9,6 +9,7 @@
   <style>
     html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; }
     .leaflet-container { font-family: Tahoma, sans-serif; background: #dbeafe; }
+    .leaflet-control-attribution { display: none !important; }
     .marker-origin, .marker-destination, .marker-default {
       background: transparent;
       border: none;
@@ -23,30 +24,17 @@
     .pin-origin .pin-dot { background: #16a34a; }
     .pin-destination .pin-dot { background: #dc2626; }
     .pin-default .pin-dot { background: #2563eb; }
-    .pin-label {
-      position: absolute;
-      top: -28px;
-      right: -8px;
-      white-space: nowrap;
-      background: rgba(255, 255, 255, 0.95);
-      color: #0f172a;
-      font-size: 11px;
-      font-weight: 700;
-      padding: 2px 6px;
-      border-radius: 6px;
-      border: 1px solid #cbd5e1;
-    }
   </style>
 </head>
 <body>
   <div id="map"></div>
   <script>
-    const GILAN = [[36.55, 48.40], [38.55, 50.45]];
+    const RUDSAR = [[36.98, 50.12], [37.22, 50.52]];
+    const RUDSAR_CENTER = [37.137, 50.288];
     let bridge = null;
     let map = null;
     let markersLayer = null;
     let routeLayer = null;
-    let mapReady = false;
     let pendingMarkers = '[]';
     let pendingRoute = '[]';
 
@@ -62,10 +50,18 @@
     }
 
     function initMap() {
-      map = L.map('map', { zoomControl: true }).fitBounds(GILAN);
+      map = L.map('map', {
+        zoomControl: true,
+        attributionControl: false,
+        minZoom: 11,
+        maxZoom: 17,
+        maxBounds: RUDSAR,
+        maxBoundsViscosity: 1.0
+      }).setView(RUDSAR_CENTER, 12);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 18,
-        attribution: '&copy; OpenStreetMap'
+        maxZoom: 17,
+        minZoom: 11,
+        attribution: ''
       }).addTo(map);
       markersLayer = L.layerGroup().addTo(map);
       routeLayer = L.layerGroup().addTo(map);
@@ -74,7 +70,6 @@
           bridge.mapClicked(e.latlng.lat, e.latlng.lng);
         }
       });
-      mapReady = true;
       setMarkers(pendingMarkers);
       drawRoute(pendingRoute);
       setTimeout(function () { map.invalidateSize(); }, 120);
@@ -90,6 +85,10 @@
         const label = m.label || m.title || '';
         if (label) mk.bindPopup(label);
       });
+      if (items.length > 0) {
+        const latlngs = items.map(function (m) { return [m.lat, m.lng]; });
+        map.fitBounds(latlngs, { padding: [36, 36], maxZoom: 14 });
+      }
     }
 
     function drawRoute(jsonStr) {
@@ -100,7 +99,7 @@
       if (pts.length < 2) return;
       const latlngs = pts.map(function (p) { return [p[0], p[1]]; });
       L.polyline(latlngs, { color: '#2563eb', weight: 5, opacity: 0.85 }).addTo(routeLayer);
-      map.fitBounds(latlngs, { padding: [48, 48] });
+      map.fitBounds(latlngs, { padding: [40, 40], maxZoom: 14 });
     }
 
     function clearRoute() {

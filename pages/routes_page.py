@@ -11,14 +11,13 @@ from PySide6.QtWidgets import (
     QLabel,
     QProgressBar,
     QPushButton,
-    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
 
 from database.db import DatabaseError, DatabaseManager
 from ui.form_widgets import NoWheelComboBox, configure_combo_field, configure_spin_field
-from ui.geo_utils import clamp_to_gilan
+from ui.geo_utils import clamp_to_rudsar
 from ui.route_batch_worker import RouteBatchWorker, RouteComputeWorker
 from ui.route_map_widget import RouteMapWidget
 from ui.utils import Page, clear_layout, make_stat_card, show_error, show_success, to_persian_digits
@@ -57,6 +56,7 @@ class RoutesPage(Page):
         body.addWidget(map_card, stretch=7)
         body.addWidget(panel, stretch=3)
         self.root_layout.addLayout(body, stretch=1)
+        self.root_layout.addWidget(self._batch_card())
         self._center_page_header()
 
     def _center_page_header(self) -> None:
@@ -80,7 +80,7 @@ class RoutesPage(Page):
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(8)
         header = QHBoxLayout()
-        title = QLabel("نقشه گیلان")
+        title = QLabel("نقشه شهرستان رودسر")
         title.setObjectName("sectionTitle")
         self.map_mode_label = QLabel("")
         self.map_mode_label.setObjectName("routeMapHint")
@@ -100,19 +100,14 @@ class RoutesPage(Page):
         return card
 
     def _panel_card(self) -> QWidget:
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-
         card = self.card()
         card.setObjectName("routePanelCard")
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(18, 16, 18, 16)
-        layout.setSpacing(14)
+        layout.setContentsMargins(12, 10, 12, 10)
+        layout.setSpacing(6)
 
         origin_title = QLabel("مبدا (A)")
-        origin_title.setObjectName("sectionTitle")
+        origin_title.setObjectName("routeSectionTitle")
         self.origin_category_combo = self._category_combo()
         self.origin_location_combo = self._location_combo()
         self.origin_category_combo.currentIndexChanged.connect(
@@ -122,7 +117,7 @@ class RoutesPage(Page):
         self.origin_category_combo.currentIndexChanged.connect(self._on_endpoint_changed)
 
         destination_title = QLabel("مقصد (B)")
-        destination_title.setObjectName("sectionTitle")
+        destination_title.setObjectName("routeSectionTitle")
         self.destination_category_combo = self._category_combo()
         self.destination_location_combo = self._location_combo()
         self.destination_category_combo.currentIndexChanged.connect(
@@ -132,112 +127,134 @@ class RoutesPage(Page):
         self.destination_category_combo.currentIndexChanged.connect(self._on_endpoint_changed)
 
         pin_buttons = QHBoxLayout()
-        pin_buttons.setSpacing(8)
-        self.origin_pin_button = self._pin_button("ثبت مبدا روی نقشه", PinTarget.ORIGIN)
-        self.destination_pin_button = self._pin_button("ثبت مقصد روی نقشه", PinTarget.DESTINATION)
+        pin_buttons.setSpacing(6)
+        self.origin_pin_button = self._pin_button("پین مبدا", PinTarget.ORIGIN)
+        self.destination_pin_button = self._pin_button("پین مقصد", PinTarget.DESTINATION)
         pin_buttons.addWidget(self.origin_pin_button)
         pin_buttons.addWidget(self.destination_pin_button)
 
-        route_title = QLabel("مسافت مسیر")
-        route_title.setObjectName("sectionTitle")
+        route_title = QLabel("مسافت")
+        route_title.setObjectName("routeSectionTitle")
         self.distance_input = QDoubleSpinBox()
+        self.distance_input.setObjectName("routeCompactSpin")
         configure_spin_field(self.distance_input)
         self.distance_input.setRange(0, 1_000_000)
         self.distance_input.setDecimals(1)
         self.distance_input.setSuffix(" km")
         self.distance_input.setReadOnly(True)
         self.distance_input.setButtonSymbols(QDoubleSpinBox.ButtonSymbols.NoButtons)
+        self.distance_input.setFixedHeight(30)
         self.route_mode_label = QLabel("")
         self.route_mode_label.setObjectName("routeModeHint")
         self.route_mode_label.setWordWrap(True)
 
         action_row = QHBoxLayout()
-        action_row.setSpacing(8)
-        self.calc_button = self.action_button("محاسبه / بروزرسانی")
+        action_row.setSpacing(6)
+        self.calc_button = self._compact_button("محاسبه")
         self.calc_button.clicked.connect(lambda: self.calculate_route(force=True))
-        self.cache_button = self.action_button("خواندن از کش", "secondary")
+        self.cache_button = self._compact_button("از کش", "secondary")
         self.cache_button.clicked.connect(lambda: self.calculate_route(force=False))
         action_row.addWidget(self.calc_button)
         action_row.addWidget(self.cache_button)
 
-        batch_title = QLabel("محاسبه دسته‌ای (کش)")
-        batch_title.setObjectName("sectionTitle")
-        self.batch_hint = QLabel(
-            "مسیرهای ذخیره‌نشده بین نقاط دارای موقعیت، یکی‌یکی محاسبه و در پایگاه داده ذخیره می‌شوند."
-        )
+        layout.addWidget(origin_title)
+        layout.addLayout(self._compact_endpoint_row("دسته", self.origin_category_combo, "نقطه", self.origin_location_combo))
+        layout.addWidget(destination_title)
+        layout.addLayout(self._compact_endpoint_row("دسته", self.destination_category_combo, "نقطه", self.destination_location_combo))
+        layout.addLayout(pin_buttons)
+        layout.addWidget(route_title)
+        layout.addWidget(self.distance_input)
+        layout.addLayout(action_row)
+        layout.addWidget(self.route_mode_label)
+        self._update_pin_buttons()
+        return card
+
+    def _batch_card(self) -> QWidget:
+        card = self.card()
+        card.setObjectName("routeBatchCard")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(14, 10, 14, 10)
+        layout.setSpacing(6)
+        batch_title = QLabel("محاسبه دسته‌ای مسیرها (کش)")
+        batch_title.setObjectName("routeSectionTitle")
+        self.batch_hint = QLabel("مسیرهای ذخیره‌نشده بین نقاط دارای موقعیت، در پس‌زمینه محاسبه می‌شوند.")
         self.batch_hint.setObjectName("routeMapHint")
         self.batch_hint.setWordWrap(True)
         self.batch_progress = QProgressBar()
         self.batch_progress.setRange(0, 100)
         self.batch_progress.setValue(0)
+        self.batch_progress.setFixedHeight(10)
         self.batch_status_label = QLabel("آماده")
         self.batch_status_label.setObjectName("routeModeHint")
-        self.batch_status_label.setWordWrap(True)
         batch_buttons = QHBoxLayout()
         batch_buttons.setSpacing(8)
-        self.batch_start_button = self.action_button("محاسبه مسیرهای جدید")
+        self.batch_start_button = self._compact_button("محاسبه مسیرهای جدید")
         self.batch_start_button.clicked.connect(self._start_batch_compute)
-        self.batch_stop_button = self.action_button("توقف", "danger")
+        self.batch_stop_button = self._compact_button("توقف", "danger")
         self.batch_stop_button.clicked.connect(self._stop_batch_compute)
         self.batch_stop_button.setEnabled(False)
         batch_buttons.addWidget(self.batch_start_button)
         batch_buttons.addWidget(self.batch_stop_button)
-
-        layout.addWidget(origin_title)
-        layout.addWidget(self._field_box("دسته‌بندی", self.origin_category_combo))
-        layout.addWidget(self._field_box("نقطه", self.origin_location_combo))
-        layout.addWidget(destination_title)
-        layout.addWidget(self._field_box("دسته‌بندی", self.destination_category_combo))
-        layout.addWidget(self._field_box("نقطه", self.destination_location_combo))
-        layout.addLayout(pin_buttons)
-        layout.addWidget(route_title)
-        layout.addWidget(self._field_box("مسافت", self.distance_input))
-        layout.addLayout(action_row)
-        layout.addWidget(self.route_mode_label)
-        layout.addSpacing(8)
+        batch_buttons.addStretch(1)
         layout.addWidget(batch_title)
         layout.addWidget(self.batch_hint)
         layout.addWidget(self.batch_progress)
         layout.addWidget(self.batch_status_label)
         layout.addLayout(batch_buttons)
-        layout.addStretch(1)
-        self._update_pin_buttons()
+        return card
 
-        scroll.setWidget(card)
-        return scroll
+    def _compact_endpoint_row(
+        self,
+        cat_label: str,
+        cat_combo: NoWheelComboBox,
+        loc_label: str,
+        loc_combo: NoWheelComboBox,
+    ) -> QHBoxLayout:
+        row = QHBoxLayout()
+        row.setSpacing(6)
+        row.addLayout(self._compact_field(cat_label, cat_combo), stretch=1)
+        row.addLayout(self._compact_field(loc_label, loc_combo), stretch=1)
+        return row
+
+    def _compact_field(self, label: str, widget: QWidget) -> QVBoxLayout:
+        box = QVBoxLayout()
+        box.setSpacing(2)
+        box.setContentsMargins(0, 0, 0, 0)
+        label_widget = QLabel(label)
+        label_widget.setObjectName("routeFieldLabel")
+        box.addWidget(label_widget)
+        box.addWidget(widget)
+        return box
+
+    def _compact_button(self, title: str, role: str = "primary") -> QPushButton:
+        button = QPushButton(title)
+        button.setObjectName("routeCompactButton")
+        button.setProperty("role", role)
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.setFixedHeight(30)
+        return button
 
     def _category_combo(self) -> NoWheelComboBox:
         combo = NoWheelComboBox()
+        combo.setObjectName("routeCompactCombo")
         configure_combo_field(combo)
+        combo.setFixedHeight(30)
         combo.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         return combo
 
     def _location_combo(self) -> NoWheelComboBox:
         combo = NoWheelComboBox()
+        combo.setObjectName("routeCompactCombo")
         configure_combo_field(combo)
+        combo.setFixedHeight(30)
         combo.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         return combo
 
     def _pin_button(self, title: str, target: PinTarget) -> QPushButton:
-        button = QPushButton(title)
-        button.setCursor(Qt.CursorShape.PointingHandCursor)
-        button.setProperty("role", "secondary")
+        button = self._compact_button(title, "secondary")
         button.setProperty("pinTarget", target.value)
         button.clicked.connect(lambda: self._set_pin_target(target))
         return button
-
-    def _field_box(self, label: str, widget: QWidget) -> QWidget:
-        box = QWidget()
-        box.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        layout = QVBoxLayout(box)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(6)
-        label_widget = QLabel(label)
-        label_widget.setObjectName("fieldLabel")
-        label_widget.setAlignment(Qt.AlignmentFlag.AlignRight)
-        layout.addWidget(label_widget)
-        layout.addWidget(widget)
-        return box
 
     def _set_pin_target(self, target: PinTarget) -> None:
         self._pin_target = target
@@ -405,7 +422,7 @@ class RoutesPage(Page):
             show_error(self, f"ابتدا {label} را از دسته‌بندی و نقطه انتخاب کنید.")
             return
 
-        latitude, longitude = clamp_to_gilan(latitude, longitude)
+        latitude, longitude = clamp_to_rudsar(latitude, longitude)
         try:
             self.db.update_location_coordinates(location_id, latitude, longitude)
         except DatabaseError as exc:

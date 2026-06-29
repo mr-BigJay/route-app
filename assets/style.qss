@@ -264,7 +264,47 @@ QLabel#routeDistanceValue {
 
 QLabel#routeModeHint {
     color: #2563EB;
+    font-size: 11px;
+}
+
+QLabel#routeSectionTitle {
+    color: #1E3A8A;
     font-size: 12px;
+    font-weight: 800;
+    padding-top: 2px;
+}
+
+QLabel#routeFieldLabel {
+    color: #64748B;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+QComboBox#routeCompactCombo {
+    min-height: 30px;
+    max-height: 30px;
+    font-size: 11px;
+    padding: 0 8px;
+}
+
+QDoubleSpinBox#routeCompactSpin {
+    min-height: 30px;
+    max-height: 30px;
+    font-size: 11px;
+}
+
+QPushButton#routeCompactButton {
+    min-height: 30px;
+    max-height: 30px;
+    padding: 0 10px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+QFrame#routeBatchCard {
+    background: #FFFFFF;
+    border: 1px solid #BFDBFE;
+    border-radius: 18px;
 }
 
 QPushButton[pinTarget][active="true"] {

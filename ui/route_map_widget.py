@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from PySide6.QtCore import QPointF, QRectF, Qt, QUrl, Signal
+from PySide6.QtCore import QPointF, QRectF, Qt, QUrl, Signal, Slot
 from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPen
 from PySide6.QtWidgets import (
     QGraphicsEllipseItem,
@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ui.geo_utils import GILAN_BOUNDS
+from ui.geo_utils import RUDSAR_BOUNDS
 
 _MAP_DIR = Path(__file__).resolve().parent.parent / "assets" / "map"
 _MAP_HTML = _MAP_DIR / "route_map.html"
@@ -38,9 +38,11 @@ class _MapBridge(QWidget):
     map_clicked = Signal(float, float)
     map_ready = Signal()
 
+    @Slot(float, float)
     def mapClicked(self, lat: float, lng: float) -> None:
-        self.map_clicked.emit(lat, lng)
+        self.map_clicked.emit(float(lat), float(lng))
 
+    @Slot()
     def mapReady(self) -> None:
         self.map_ready.emit()
 
@@ -70,10 +72,10 @@ class CanvasRouteMap(QGraphicsView):
         self.map_ready.emit()
 
     def _lat_lng_to_scene(self, lat: float, lng: float) -> QPointF:
-        min_lat = GILAN_BOUNDS["lat_min"]
-        max_lat = GILAN_BOUNDS["lat_max"]
-        min_lng = GILAN_BOUNDS["lng_min"]
-        max_lng = GILAN_BOUNDS["lng_max"]
+        min_lat = RUDSAR_BOUNDS["lat_min"]
+        max_lat = RUDSAR_BOUNDS["lat_max"]
+        min_lng = RUDSAR_BOUNDS["lng_min"]
+        max_lng = RUDSAR_BOUNDS["lng_max"]
         w = self._scene_rect.width()
         h = self._scene_rect.height()
         x = (lng - min_lng) / (max_lng - min_lng) * w
@@ -81,10 +83,10 @@ class CanvasRouteMap(QGraphicsView):
         return QPointF(x, y)
 
     def _scene_to_lat_lng(self, point: QPointF) -> tuple[float, float]:
-        min_lat = GILAN_BOUNDS["lat_min"]
-        max_lat = GILAN_BOUNDS["lat_max"]
-        min_lng = GILAN_BOUNDS["lng_min"]
-        max_lng = GILAN_BOUNDS["lng_max"]
+        min_lat = RUDSAR_BOUNDS["lat_min"]
+        max_lat = RUDSAR_BOUNDS["lat_max"]
+        min_lng = RUDSAR_BOUNDS["lng_min"]
+        max_lng = RUDSAR_BOUNDS["lng_max"]
         w = self._scene_rect.width()
         h = self._scene_rect.height()
         lng = min_lng + (point.x() / w) * (max_lng - min_lng)
@@ -103,7 +105,7 @@ class CanvasRouteMap(QGraphicsView):
             QBrush(QColor("#dcfce7")),
         )
         land.setZValue(0)
-        hint = self._scene.addText("نقشه آفلاین — روی نقشه کلیک کنید تا موقعیت ثبت شود")
+        hint = self._scene.addText("نقشه آفلاین شهرستان رودسر — کلیک برای ثبت موقعیت")
         hint.setDefaultTextColor(QColor("#64748b"))
         hint.setFont(QFont("Tahoma", 9))
         hint.setPos(170, 20)
