@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from PySide6.QtCore import QPointF, QRectF, Qt, QUrl, Signal, Slot
+from PySide6.QtCore import QObject, QPointF, QRectF, Qt, QUrl, Signal, Slot
 from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPen
 from PySide6.QtWidgets import (
     QGraphicsEllipseItem,
@@ -32,8 +32,8 @@ def _webengine_available() -> bool:
         return False
 
 
-class _MapBridge(QWidget):
-    """Qt WebChannel bridge for Leaflet map."""
+class _MapBridge(QObject):
+    """Qt WebChannel bridge for Leaflet map (QObject avoids QWidget property warnings)."""
 
     map_clicked = Signal(float, float)
     map_ready = Signal()
@@ -205,7 +205,7 @@ if _webengine_available():
             settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
             settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
             settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)
-            self._bridge = _MapBridge()
+            self._bridge = _MapBridge(self)
             self._bridge.map_clicked.connect(self.map_clicked)
             self._bridge.map_ready.connect(self._on_bridge_ready)
             channel = QWebChannel(self.page())
