@@ -64,6 +64,7 @@ class CanvasRouteMap(QGraphicsView):
         self._markers: list[dict] = []
         self._route: list[tuple[float, float]] = []
         self._scene_rect = QRectF(0, 0, 800, 600)
+        self._press_pos = None
         self._scene.setSceneRect(self._scene_rect)
         self._draw_background()
         self.map_ready.emit()
@@ -113,14 +114,25 @@ class CanvasRouteMap(QGraphicsView):
         self.fitInView(self._scene_rect, Qt.AspectRatioMode.KeepAspectRatio)
 
     def mousePressEvent(self, event) -> None:
-        if event.button() == Qt.MouseButton.LeftButton and event.modifiers() == Qt.KeyboardModifier.NoModifier:
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._press_pos = event.position()
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event) -> None:
+        if (
+            event.button() == Qt.MouseButton.LeftButton
+            and self._press_pos is not None
+            and (event.position() - self._press_pos).manhattanLength() < 8
+        ):
             pt = self.mapToScene(event.position().toPoint())
             if self._scene_rect.contains(pt):
                 lat, lng = self._scene_to_lat_lng(pt)
                 self.map_clicked.emit(lat, lng)
                 event.accept()
+                self._press_pos = None
                 return
-        super().mousePressEvent(event)
+        self._press_pos = None
+        super().mouseReleaseEvent(event)
 
     def set_markers(self, markers: list[dict]) -> None:
         self._markers = list(markers)
@@ -212,6 +224,9 @@ if _webengine_available():
 
         def _on_bridge_ready(self) -> None:
             self._js_ready = True
+            for script in self._pending_scripts:
+                self.page().runJavaScript(script)
+            self._pending_scripts.clear()
             self.map_ready.emit()
             if self._pending_markers:
                 self.set_markers(self._pending_markers)

@@ -269,6 +269,7 @@ class DatabaseManager:
                     destination_location_id INTEGER NOT NULL,
                     distance_km REAL NOT NULL,
                     route_points TEXT NOT NULL DEFAULT '[]',
+                    route_mode TEXT NOT NULL DEFAULT 'estimated',
                     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     PRIMARY KEY (origin_location_id, destination_location_id),
                     FOREIGN KEY (origin_location_id) REFERENCES locations (id) ON DELETE CASCADE,
@@ -276,6 +277,13 @@ class DatabaseManager:
                 )
                 """
             )
+            columns = {
+                row["name"] for row in conn.execute("PRAGMA table_info(route_cache)").fetchall()
+            }
+            if "route_mode" not in columns:
+                conn.execute(
+                    "ALTER TABLE route_cache ADD COLUMN route_mode TEXT NOT NULL DEFAULT 'estimated'"
+                )
 
     def seed_defaults(self) -> None:
         default_drivers = [
@@ -592,6 +600,28 @@ class DatabaseManager:
             "UPDATE locations SET latitude = ?, longitude = ? WHERE id = ?",
             (latitude, longitude, location_id),
         )
+        self.invalidate_routes_for_location(location_id)
+
+    def invalidate_routes_for_location(self, location_id: int) -> int:
+        with self.connection() as conn:
+            cursor = conn.execute(
+                """
+                DELETE FROM route_cache
+                WHERE origin_location_id = ? OR destination_location_id = ?
+                """,
+                (location_id, location_id),
+            )
+            return int(cursor.rowcount)
+
+    def count_mapped_locations(self) -> int:
+        row = self.fetch_one(
+            """
+            SELECT COUNT(*) AS total
+            FROM locations
+            WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+            """
+        )
+        return int(row["total"]) if row else 0
 
     def list_mapped_locations(self) -> list[dict[str, Any]]:
         return self.fetch_all(
@@ -610,7 +640,8 @@ class DatabaseManager:
     def get_cached_route(self, origin_location_id: int, destination_location_id: int) -> dict[str, Any] | None:
         return self.fetch_one(
             """
-            SELECT origin_location_id, destination_location_id, distance_km, route_points
+            SELECT origin_location_id, destination_location_id, distance_km,
+                   route_points, route_mode, updated_at
             FROM route_cache
             WHERE origin_location_id = ? AND destination_location_id = ?
             """,
@@ -623,25 +654,88 @@ class DatabaseManager:
         destination_location_id: int,
         distance_km: float,
         route_points: str,
+        route_mode: str = "estimated",
     ) -> None:
         self.execute(
             """
             INSERT INTO route_cache (
-                origin_location_id, destination_location_id, distance_km, route_points
+                origin_location_id, destination_location_id, distance_km,
+                route_points, route_mode
             )
-            VALUES (?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(origin_location_id, destination_location_id)
             DO UPDATE SET
                 distance_km = excluded.distance_km,
                 route_points = excluded.route_points,
+                route_mode = excluded.route_mode,
                 updated_at = CURRENT_TIMESTAMP
             """,
-            (origin_location_id, destination_location_id, distance_km, route_points),
+            (
+                origin_location_id,
+                destination_location_id,
+                distance_km,
+                route_points,
+                route_mode,
+            ),
         )
 
     def count_cached_routes(self) -> int:
         row = self.fetch_one("SELECT COUNT(*) AS total FROM route_cache")
         return int(row["total"]) if row else 0
+
+    def route_cache_stats(self) -> dict[str, int]:
+        mapped = self.count_mapped_locations()
+        cached = self.count_cached_routes()
+        possible = mapped * max(mapped - 1, 0)
+        missing_row = self.fetch_one(
+            """
+            SELECT COUNT(*) AS total
+            FROM locations AS origin
+            JOIN locations AS destination ON origin.id != destination.id
+            LEFT JOIN route_cache
+              ON route_cache.origin_location_id = origin.id
+             AND route_cache.destination_location_id = destination.id
+            WHERE origin.latitude IS NOT NULL
+              AND origin.longitude IS NOT NULL
+              AND destination.latitude IS NOT NULL
+              AND destination.longitude IS NOT NULL
+              AND route_cache.origin_location_id IS NULL
+            """
+        )
+        missing = int(missing_row["total"]) if missing_row else 0
+        return {
+            "mapped_locations": mapped,
+            "cached_routes": cached,
+            "possible_routes": possible,
+            "missing_routes": missing,
+        }
+
+    def list_uncached_route_pairs(self, limit: int | None = None) -> list[dict[str, Any]]:
+        query = """
+            SELECT
+                origin.id AS origin_id,
+                destination.id AS destination_id,
+                origin.title AS origin_title,
+                destination.title AS destination_title,
+                origin.latitude AS origin_lat,
+                origin.longitude AS origin_lng,
+                destination.latitude AS destination_lat,
+                destination.longitude AS destination_lng
+            FROM locations AS origin
+            JOIN locations AS destination ON origin.id != destination.id
+            LEFT JOIN route_cache
+              ON route_cache.origin_location_id = origin.id
+             AND route_cache.destination_location_id = destination.id
+            WHERE origin.latitude IS NOT NULL
+              AND origin.longitude IS NOT NULL
+              AND destination.latitude IS NOT NULL
+              AND destination.longitude IS NOT NULL
+              AND route_cache.origin_location_id IS NULL
+            ORDER BY origin.id, destination.id
+        """
+        if limit is not None:
+            query += f" LIMIT {int(limit)}"
+        return self.fetch_all(query)
 
     def next_free_location_sort_order(self, category_id: int) -> int:
         rows = self.fetch_all(

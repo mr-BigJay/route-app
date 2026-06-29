@@ -1,24 +1,33 @@
 from __future__ import annotations
 
-import json
 from enum import Enum
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDoubleSpinBox,
+    QFrame,
     QGridLayout,
     QHBoxLayout,
     QLabel,
+    QProgressBar,
     QPushButton,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
 
 from database.db import DatabaseError, DatabaseManager
 from ui.form_widgets import NoWheelComboBox, configure_combo_field, configure_spin_field
-from ui.geo_utils import clamp_to_gilan, estimate_route
+from ui.geo_utils import clamp_to_gilan
+from ui.route_batch_worker import RouteBatchWorker, RouteComputeWorker
 from ui.route_map_widget import RouteMapWidget
 from ui.utils import Page, clear_layout, make_stat_card, show_error, show_success, to_persian_digits
+
+MODE_LABELS = {
+    "road": "مسافت جاده‌ای (آنلاین) — در کش ذخیره شد",
+    "estimated": "مسافت تخمینی (آفلاین) — در کش ذخیره شد",
+    "cached": "مسافت از کش محلی",
+}
 
 
 class PinTarget(Enum):
@@ -28,12 +37,13 @@ class PinTarget(Enum):
 
 class RoutesPage(Page):
     def __init__(self, db: DatabaseManager) -> None:
-        super().__init__("مدیریت مسیر", "ثبت موقعیت مبدا و مقصد روی نقشه و محاسبه مسافت")
+        super().__init__("مدیریت مسیر", "ثبت موقعیت نقاط، محاسبه و ذخیره مسافت در کش محلی")
         self.setObjectName("routesPage")
         self.db = db
-        self._calculating = False
         self._pin_target = PinTarget.ORIGIN
         self._map_ready = False
+        self._single_worker: RouteComputeWorker | None = None
+        self._batch_worker: RouteBatchWorker | None = None
 
         self.stats_layout = QGridLayout()
         self.stats_layout.setSpacing(12)
@@ -69,8 +79,14 @@ class RoutesPage(Page):
         layout = QVBoxLayout(card)
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(8)
+        header = QHBoxLayout()
         title = QLabel("نقشه گیلان")
         title.setObjectName("sectionTitle")
+        self.map_mode_label = QLabel("")
+        self.map_mode_label.setObjectName("routeMapHint")
+        header.addWidget(title)
+        header.addStretch(1)
+        header.addWidget(self.map_mode_label)
         self.map_hint = QLabel(self._pin_hint_text())
         self.map_hint.setObjectName("routeMapHint")
         self.map_hint.setWordWrap(True)
@@ -78,12 +94,17 @@ class RoutesPage(Page):
         self.map_widget.setMinimumHeight(420)
         self.map_widget.map_clicked.connect(self._on_map_clicked)
         self.map_widget.map_ready.connect(self._on_map_ready)
-        layout.addWidget(title)
+        layout.addLayout(header)
         layout.addWidget(self.map_hint)
         layout.addWidget(self.map_widget, stretch=1)
         return card
 
     def _panel_card(self) -> QWidget:
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
         card = self.card()
         card.setObjectName("routePanelCard")
         layout = QVBoxLayout(card)
@@ -117,10 +138,8 @@ class RoutesPage(Page):
         pin_buttons.addWidget(self.origin_pin_button)
         pin_buttons.addWidget(self.destination_pin_button)
 
-        route_title = QLabel("محاسبه مسافت")
+        route_title = QLabel("مسافت مسیر")
         route_title.setObjectName("sectionTitle")
-        calc_button = self.action_button("محاسبه مسیر")
-        calc_button.clicked.connect(self.calculate_route)
         self.distance_input = QDoubleSpinBox()
         configure_spin_field(self.distance_input)
         self.distance_input.setRange(0, 1_000_000)
@@ -132,6 +151,38 @@ class RoutesPage(Page):
         self.route_mode_label.setObjectName("routeModeHint")
         self.route_mode_label.setWordWrap(True)
 
+        action_row = QHBoxLayout()
+        action_row.setSpacing(8)
+        self.calc_button = self.action_button("محاسبه / بروزرسانی")
+        self.calc_button.clicked.connect(lambda: self.calculate_route(force=True))
+        self.cache_button = self.action_button("خواندن از کش", "secondary")
+        self.cache_button.clicked.connect(lambda: self.calculate_route(force=False))
+        action_row.addWidget(self.calc_button)
+        action_row.addWidget(self.cache_button)
+
+        batch_title = QLabel("محاسبه دسته‌ای (کش)")
+        batch_title.setObjectName("sectionTitle")
+        self.batch_hint = QLabel(
+            "مسیرهای ذخیره‌نشده بین نقاط دارای موقعیت، یکی‌یکی محاسبه و در پایگاه داده ذخیره می‌شوند."
+        )
+        self.batch_hint.setObjectName("routeMapHint")
+        self.batch_hint.setWordWrap(True)
+        self.batch_progress = QProgressBar()
+        self.batch_progress.setRange(0, 100)
+        self.batch_progress.setValue(0)
+        self.batch_status_label = QLabel("آماده")
+        self.batch_status_label.setObjectName("routeModeHint")
+        self.batch_status_label.setWordWrap(True)
+        batch_buttons = QHBoxLayout()
+        batch_buttons.setSpacing(8)
+        self.batch_start_button = self.action_button("محاسبه مسیرهای جدید")
+        self.batch_start_button.clicked.connect(self._start_batch_compute)
+        self.batch_stop_button = self.action_button("توقف", "danger")
+        self.batch_stop_button.clicked.connect(self._stop_batch_compute)
+        self.batch_stop_button.setEnabled(False)
+        batch_buttons.addWidget(self.batch_start_button)
+        batch_buttons.addWidget(self.batch_stop_button)
+
         layout.addWidget(origin_title)
         layout.addWidget(self._field_box("دسته‌بندی", self.origin_category_combo))
         layout.addWidget(self._field_box("نقطه", self.origin_location_combo))
@@ -141,11 +192,19 @@ class RoutesPage(Page):
         layout.addLayout(pin_buttons)
         layout.addWidget(route_title)
         layout.addWidget(self._field_box("مسافت", self.distance_input))
-        layout.addWidget(calc_button)
+        layout.addLayout(action_row)
         layout.addWidget(self.route_mode_label)
+        layout.addSpacing(8)
+        layout.addWidget(batch_title)
+        layout.addWidget(self.batch_hint)
+        layout.addWidget(self.batch_progress)
+        layout.addWidget(self.batch_status_label)
+        layout.addLayout(batch_buttons)
         layout.addStretch(1)
         self._update_pin_buttons()
-        return card
+
+        scroll.setWidget(card)
+        return scroll
 
     def _category_combo(self) -> NoWheelComboBox:
         combo = NoWheelComboBox()
@@ -198,9 +257,9 @@ class RoutesPage(Page):
     def _pin_hint_text(self) -> str:
         if self._pin_target == PinTarget.ORIGIN:
             point = self._selected_location_title(self.origin_category_combo, self.origin_location_combo)
-            return f"مبدا (A) فعال است. نقطه «{point}» را انتخاب کنید و روی نقشه کلیک کنید."
+            return f"مبدا (A) فعال — «{point}» را انتخاب کنید و روی نقشه کلیک کنید."
         point = self._selected_location_title(self.destination_category_combo, self.destination_location_combo)
-        return f"مقصد (B) فعال است. نقطه «{point}» را انتخاب کنید و روی نقشه کلیک کنید."
+        return f"مقصد (B) فعال — «{point}» را انتخاب کنید و روی نقشه کلیک کنید."
 
     def _selected_location_title(
         self,
@@ -230,14 +289,14 @@ class RoutesPage(Page):
         location_combo: NoWheelComboBox,
     ) -> None:
         category_id = category_combo.currentData()
-        current = location_combo.currentText()
+        current_id = location_combo.currentData()
         location_combo.blockSignals(True)
         location_combo.clear()
         for location in self.db.list_locations():
             if category_id is None or location["category_id"] == category_id:
                 location_combo.addItem(location["title"], location["id"])
-        if current:
-            index = location_combo.findText(current)
+        if current_id is not None:
+            index = location_combo.findData(current_id)
             if index >= 0:
                 location_combo.setCurrentIndex(index)
         location_combo.blockSignals(False)
@@ -263,21 +322,20 @@ class RoutesPage(Page):
             self.destination_location_combo,
         )
         markers: list[dict] = []
-        for location in self.db.list_mapped_locations():
-            location_id = int(location["id"])
-            role = None
-            label = location["title"]
-            if location_id == origin_id:
-                role = "origin"
-                label = f"A — {location['title']}"
-            elif location_id == destination_id:
-                role = "destination"
-                label = f"B — {location['title']}"
+        for location_id, role, prefix in (
+            (origin_id, "origin", "A"),
+            (destination_id, "destination", "B"),
+        ):
+            if not location_id:
+                continue
+            location = self.db.get_location(int(location_id))
+            if not location or location["latitude"] is None or location["longitude"] is None:
+                continue
             markers.append(
                 {
-                    "id": location_id,
+                    "id": int(location_id),
                     "title": location["title"],
-                    "label": label,
+                    "label": f"{prefix} — {location['title']}",
                     "lat": float(location["latitude"]),
                     "lng": float(location["longitude"]),
                     "role": role,
@@ -285,12 +343,20 @@ class RoutesPage(Page):
             )
         return markers
 
+    def _update_map_mode_label(self) -> None:
+        if self.map_widget.uses_web_engine():
+            self.map_mode_label.setText("نقشه آنلاین")
+        else:
+            self.map_mode_label.setText("نقشه آفلاین")
+
     def _on_endpoint_changed(self) -> None:
         self.map_hint.setText(self._pin_hint_text())
         self._update_map_markers()
+        self._try_auto_calculate()
 
     def _on_map_ready(self) -> None:
         self._map_ready = True
+        self._update_map_mode_label()
         self._update_map_markers()
 
     def _update_map_markers(self) -> None:
@@ -302,27 +368,27 @@ class RoutesPage(Page):
         self._populate_category_combos()
         self._populate_location_combo(self.origin_category_combo, self.origin_location_combo)
         self._populate_location_combo(self.destination_category_combo, self.destination_location_combo)
+        self._update_map_mode_label()
         self._update_map_markers()
-        self.map_widget.clear_route()
-        self.distance_input.setValue(0)
-        self.route_mode_label.setText("")
         self._refresh_stats()
         self.map_hint.setText(self._pin_hint_text())
+        self._try_auto_calculate()
 
     def _refresh_stats(self) -> None:
-        mapped_count = len(self.db.list_mapped_locations())
-        cached_count = self.db.count_cached_routes()
+        stats = self.db.route_cache_stats()
         clear_layout(self.stats_layout)
-        self.stats_layout.addWidget(
-            make_stat_card("نقاط ثبت‌شده روی نقشه", str(mapped_count), "#2563EB", "#EFF6FF"),
-            0,
-            0,
-        )
-        self.stats_layout.addWidget(
-            make_stat_card("مسیرهای ذخیره‌شده", str(cached_count), "#16A34A", "#F0FDF4"),
-            0,
-            1,
-        )
+        cards = [
+            ("نقاط روی نقشه", stats["mapped_locations"], "#2563EB", "#EFF6FF"),
+            ("مسیرهای ذخیره‌شده", stats["cached_routes"], "#16A34A", "#F0FDF4"),
+            ("مسیرهای ممکن", stats["possible_routes"], "#7C3AED", "#F5F3FF"),
+            ("بدون کش", stats["missing_routes"], "#EA580C", "#FFF7ED"),
+        ]
+        for index, (title, value, accent, tint) in enumerate(cards):
+            self.stats_layout.addWidget(
+                make_stat_card(title, str(value), accent, tint),
+                0,
+                index,
+            )
 
     def _on_map_clicked(self, latitude: float, longitude: float) -> None:
         if self._pin_target == PinTarget.ORIGIN:
@@ -346,96 +412,133 @@ class RoutesPage(Page):
             show_error(self, str(exc))
             return
 
-        show_success(self, f"موقعیت {label} «{location_combo.currentText()}» روی نقشه ثبت شد.")
+        show_success(self, f"موقعیت {label} «{location_combo.currentText()}» ثبت شد. مسیرهای مرتبط از کش حذف شدند.")
         self._update_map_markers()
         self._refresh_stats()
 
+        if self._pin_target == PinTarget.ORIGIN:
+            self._set_pin_target(PinTarget.DESTINATION)
+        self._try_auto_calculate(force=True)
+
+    def _try_auto_calculate(self, *, force: bool = False) -> None:
         origin_id = self._location_id_from_combos(self.origin_category_combo, self.origin_location_combo)
         destination_id = self._location_id_from_combos(
             self.destination_category_combo,
             self.destination_location_combo,
         )
-        if origin_id and destination_id and origin_id != destination_id:
-            origin = self.db.get_location(origin_id)
-            destination = self.db.get_location(destination_id)
-            if (
-                origin
-                and destination
-                and origin["latitude"] is not None
-                and origin["longitude"] is not None
-                and destination["latitude"] is not None
-                and destination["longitude"] is not None
-            ):
-                self.calculate_route()
-
-        if self._pin_target == PinTarget.ORIGIN:
-            self._set_pin_target(PinTarget.DESTINATION)
-
-    def calculate_route(self) -> None:
-        if self._calculating:
+        if not origin_id or not destination_id or origin_id == destination_id:
+            self.map_widget.clear_route()
+            self.distance_input.setValue(0)
+            self.route_mode_label.setText("")
             return
+        origin = self.db.get_location(origin_id)
+        destination = self.db.get_location(destination_id)
+        if not origin or not destination:
+            return
+        if origin["latitude"] is None or origin["longitude"] is None:
+            self.route_mode_label.setText("موقعیت مبدا روی نقشه ثبت نشده است.")
+            self.map_widget.clear_route()
+            self.distance_input.setValue(0)
+            return
+        if destination["latitude"] is None or destination["longitude"] is None:
+            self.route_mode_label.setText("موقعیت مقصد روی نقشه ثبت نشده است.")
+            self.map_widget.clear_route()
+            self.distance_input.setValue(0)
+            return
+        self.calculate_route(force=force)
 
+    def calculate_route(self, *, force: bool = False) -> None:
         origin_id = self._location_id_from_combos(self.origin_category_combo, self.origin_location_combo)
         destination_id = self._location_id_from_combos(
             self.destination_category_combo,
             self.destination_location_combo,
         )
         if not origin_id or not destination_id:
-            show_error(self, "مبدا و مقصد را از منوی مدیریت نقاط انتخاب کنید.")
+            show_error(self, "مبدا و مقصد را انتخاب کنید.")
             return
         if origin_id == destination_id:
             show_error(self, "مبدا و مقصد نمی‌توانند یکسان باشند.")
             return
 
-        origin = self.db.get_location(origin_id)
-        destination = self.db.get_location(destination_id)
-        if not origin or not destination:
-            show_error(self, "نقطه انتخاب‌شده یافت نشد.")
-            return
-        if origin["latitude"] is None or origin["longitude"] is None:
-            show_error(self, f"موقعیت مبدا «{origin['title']}» هنوز روی نقشه ثبت نشده است.")
-            return
-        if destination["latitude"] is None or destination["longitude"] is None:
-            show_error(self, f"موقعیت مقصد «{destination['title']}» هنوز روی نقشه ثبت نشده است.")
-            return
+        self._stop_single_worker()
+        self.calc_button.setEnabled(False)
+        self.cache_button.setEnabled(False)
+        self.route_mode_label.setText("در حال محاسبه مسافت...")
 
-        self._calculating = True
-        try:
-            cached = self.db.get_cached_route(origin_id, destination_id)
-            if cached:
-                distance_km = float(cached["distance_km"])
-                points = json.loads(cached["route_points"] or "[]")
-                mode = "cached"
-            else:
-                result = estimate_route(
-                    float(origin["latitude"]),
-                    float(origin["longitude"]),
-                    float(destination["latitude"]),
-                    float(destination["longitude"]),
-                )
-                distance_km = float(result["distance_km"])
-                points = result["points"]
-                mode = str(result["mode"])
-                try:
-                    self.db.save_route_cache(
-                        origin_id,
-                        destination_id,
-                        distance_km,
-                        json.dumps(points, ensure_ascii=False),
-                    )
-                except DatabaseError as exc:
-                    show_error(self, str(exc))
-                    return
+        worker = RouteComputeWorker(self.db, origin_id, destination_id, force=force, parent=self)
+        worker.succeeded.connect(self._on_route_computed)
+        worker.failed.connect(self._on_route_failed)
+        worker.finished.connect(self._on_single_worker_finished)
+        self._single_worker = worker
+        worker.start()
 
-            self.map_widget.draw_route([(float(point[0]), float(point[1])) for point in points])
-            self.distance_input.setValue(round(distance_km, 1))
-            self._update_map_markers()
-            mode_text = {
-                "road": "مسافت بر اساس مسیر جاده‌ای (آنلاین)",
-                "estimated": "مسافت تخمینی (آفلاین)",
-                "cached": "مسافت از مسیر ذخیره‌شده",
-            }
-            self.route_mode_label.setText(mode_text.get(mode, ""))
+    def _stop_single_worker(self) -> None:
+        if self._single_worker and self._single_worker.isRunning():
+            self._single_worker.wait(2000)
+        self._single_worker = None
+
+    def _on_single_worker_finished(self) -> None:
+        self.calc_button.setEnabled(True)
+        self.cache_button.setEnabled(True)
+
+    def _on_route_computed(self, result: dict) -> None:
+        points = result.get("points") or []
+        self.map_widget.draw_route([(float(p[0]), float(p[1])) for p in points])
+        self.distance_input.setValue(round(float(result["distance_km"]), 1))
+        self._update_map_markers()
+        mode = str(result.get("mode") or "cached")
+        self.route_mode_label.setText(MODE_LABELS.get(mode, mode))
+        self._refresh_stats()
+
+    def _on_route_failed(self, message: str) -> None:
+        self.route_mode_label.setText("")
+        show_error(self, message)
+
+    def _start_batch_compute(self) -> None:
+        if self._batch_worker and self._batch_worker.isRunning():
+            return
+        pairs = self.db.list_uncached_route_pairs()
+        if not pairs:
+            show_success(self, "همه مسیرهای ممکن بین نقاط دارای موقعیت، قبلاً ذخیره شده‌اند.")
             self._refresh_stats()
-        finally:
-            self._calculating = False
+            return
+
+        self.batch_progress.setRange(0, len(pairs))
+        self.batch_progress.setValue(0)
+        self.batch_start_button.setEnabled(False)
+        self.batch_stop_button.setEnabled(True)
+        self.batch_status_label.setText(f"شروع محاسبه {to_persian_digits(len(pairs))} مسیر...")
+
+        worker = RouteBatchWorker(self.db, pairs, parent=self)
+        worker.progress.connect(self._on_batch_progress)
+        worker.finished_ok.connect(self._on_batch_finished)
+        worker.failed.connect(lambda msg: show_error(self, msg))
+        worker.finished.connect(self._on_batch_worker_closed)
+        self._batch_worker = worker
+        worker.start()
+
+    def _stop_batch_compute(self) -> None:
+        if self._batch_worker and self._batch_worker.isRunning():
+            self._batch_worker.cancel()
+            self.batch_status_label.setText("در حال توقف...")
+            self.batch_stop_button.setEnabled(False)
+
+    def _on_batch_progress(self, done: int, total: int, label: str) -> None:
+        self.batch_progress.setMaximum(total)
+        self.batch_progress.setValue(done)
+        self.batch_status_label.setText(
+            f"{to_persian_digits(done)} از {to_persian_digits(total)} — {label}"
+        )
+
+    def _on_batch_finished(self, success_count: int, failed_count: int) -> None:
+        self._refresh_stats()
+        self.batch_status_label.setText(
+            f"پایان — موفق: {to_persian_digits(success_count)} | ناموفق: {to_persian_digits(failed_count)}"
+        )
+        if success_count:
+            self._try_auto_calculate()
+
+    def _on_batch_worker_closed(self) -> None:
+        self.batch_start_button.setEnabled(True)
+        self.batch_stop_button.setEnabled(False)
+        self._batch_worker = None
