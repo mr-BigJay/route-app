@@ -6,10 +6,13 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
+    QFrame,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit,
+    QPushButton,
+    QSizePolicy,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -18,11 +21,8 @@ from PySide6.QtWidgets import (
 
 from database.db import DatabaseManager
 from ui.utils import (
-    PRIMARY_COLOR,
-    SUCCESS_COLOR,
     Page,
     gregorian_to_jalali,
-    make_stat_card,
     show_error,
     show_success,
     to_english_digits,
@@ -33,6 +33,7 @@ from ui.utils import (
 class ReportsPage(Page):
     def __init__(self, db: DatabaseManager) -> None:
         super().__init__("گزارشات", "گزارش‌گیری ساده و خروجی Excel")
+        self.setObjectName("reportsPage")
         self.db = db
         self.report_rows: list[dict] = []
         self.total_distance = 0.0
@@ -40,102 +41,193 @@ class ReportsPage(Page):
         self.root_layout.addWidget(self._filters_card())
         self.root_layout.addWidget(self._table_card(), stretch=1)
         self.root_layout.addWidget(self._totals_card())
+        self._center_page_header()
 
-    def _filters_card(self):
+    def _center_page_header(self) -> None:
+        header = self.root_layout.itemAt(0).widget()
+        if header is None:
+            return
+        layout = header.layout()
+        if layout is None:
+            return
+        for index in range(layout.count()):
+            item = layout.itemAt(index)
+            widget = item.widget()
+            if widget is not None:
+                widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                layout.setAlignment(widget, Qt.AlignmentFlag.AlignHCenter)
+
+    def _build_themed_card(self, title: str, subtitle: str | None = None) -> tuple[QFrame, QVBoxLayout]:
         card = self.card()
+        card.setObjectName("missionsTableCard")
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(18, 16, 18, 16)
-        layout.setSpacing(14)
-        title = QLabel("فیلتر گزارش")
-        title.setObjectName("sectionTitle")
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        header = QFrame()
+        header.setObjectName("missionsTableHeader")
+        header_layout = QVBoxLayout(header)
+        header_layout.setContentsMargins(18, 10, 18, 10)
+        header_layout.setSpacing(0)
+        title_label = QLabel(title)
+        title_label.setObjectName("missionsTableTitle")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        header_layout.addWidget(title_label)
+        if subtitle:
+            header_layout.setSpacing(4)
+            header_layout.setContentsMargins(18, 14, 18, 12)
+            subtitle_label = QLabel(subtitle)
+            subtitle_label.setObjectName("missionsTableSubtitle")
+            subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            subtitle_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+            header_layout.addWidget(subtitle_label)
+
+        wrap = QFrame()
+        wrap.setObjectName("missionsTableWrap")
+        body_layout = QVBoxLayout(wrap)
+        body_layout.setContentsMargins(14, 14, 14, 14)
+        body_layout.setSpacing(12)
+
+        layout.addWidget(header)
+        layout.addWidget(wrap, stretch=1)
+        return card, body_layout
+
+    def _style_filter_input(self, widget: QWidget) -> None:
+        widget.setObjectName("reportsFilterInput")
+        widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+
+    def _filters_card(self) -> QFrame:
+        card, layout = self._build_themed_card("گزارش ماموریت رانندگان")
 
         self.driver_combo = QComboBox()
-        self.driver_combo.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        self._style_filter_input(self.driver_combo)
         self.start_date_input = QLineEdit()
         self.end_date_input = QLineEdit()
         for date_input in [self.start_date_input, self.end_date_input]:
+            self._style_filter_input(date_input)
+            date_input.setProperty("dateField", True)
             date_input.setPlaceholderText("yyyy/mm/dd")
             date_input.setMaxLength(10)
-            date_input.setAlignment(Qt.AlignmentFlag.AlignRight)
+            date_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        filters_row = QHBoxLayout()
-        filters_row.setDirection(QHBoxLayout.Direction.RightToLeft)
-        filters_row.setSpacing(12)
-        filters_row.addWidget(self._field_box("راننده", self.driver_combo), stretch=30)
-        filters_row.addWidget(self._date_range_box(), stretch=70)
+        date_width = 128
+        driver_width = 196
+
+        fields_row = QHBoxLayout()
+        fields_row.setSpacing(16)
+        fields_row.setContentsMargins(0, 0, 0, 0)
+        fields_row.addWidget(self._stacked_field("راننده", self.driver_combo, field_width=driver_width))
+        fields_row.addWidget(self._stacked_field("تاریخ ابتدا", self.start_date_input, field_width=date_width))
+        fields_row.addWidget(self._stacked_field("تاریخ انتها", self.end_date_input, field_width=date_width))
+
+        fields_wrapper = QWidget()
+        fields_wrapper.setLayout(fields_row)
+
+        fields_center = QHBoxLayout()
+        fields_center.setContentsMargins(0, 0, 0, 0)
+        fields_center.addStretch(1)
+        fields_center.addWidget(fields_wrapper)
+        fields_center.addStretch(1)
 
         buttons = QHBoxLayout()
-        buttons.setDirection(QHBoxLayout.Direction.RightToLeft)
-        generate_button = self.action_button("نمایش گزارش")
-        export_button = self.action_button("خروجی Excel", "secondary")
+        buttons.setSpacing(10)
+        buttons.setContentsMargins(0, 0, 0, 0)
+        generate_button = self._reports_action_button("نمایش گزارش", "primary")
+        export_button = self._reports_action_button("خروجی Excel", "secondary")
         generate_button.clicked.connect(self.generate_report)
         export_button.clicked.connect(self.export_excel)
+        buttons.addStretch(1)
         buttons.addWidget(generate_button)
         buttons.addWidget(export_button)
+        buttons.addStretch(1)
 
-        layout.addWidget(title)
-        layout.addLayout(filters_row)
+        layout.addLayout(fields_center)
         layout.addLayout(buttons)
         return card
 
-    def _field_box(self, label: str, widget: QWidget) -> QWidget:
+    def _reports_action_button(self, title: str, variant: str) -> QPushButton:
+        button = QPushButton(title)
+        button.setObjectName("reportsActionButton")
+        button.setProperty("variant", variant)
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        return button
+
+    def _stacked_field(self, label: str, widget: QWidget, *, field_width: int) -> QWidget:
         box = QWidget()
-        box.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        box.setObjectName("reportsFilterField")
+        box.setFixedWidth(field_width)
         layout = QVBoxLayout(box)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
+        layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+
         label_widget = QLabel(label)
-        label_widget.setObjectName("fieldLabel")
-        label_widget.setAlignment(Qt.AlignmentFlag.AlignRight)
-        layout.addWidget(label_widget)
-        layout.addWidget(widget)
+        label_widget.setObjectName("reportsFieldLabel")
+        label_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        label_widget.setFixedWidth(field_width)
+
+        widget.setFixedWidth(field_width)
+        widget.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+
+        layout.addWidget(label_widget, alignment=Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(widget, alignment=Qt.AlignmentFlag.AlignHCenter)
         return box
 
-    def _date_range_box(self) -> QWidget:
-        box = QWidget()
-        box.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        layout = QVBoxLayout(box)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(6)
-        title = QLabel("تاریخ گزارش")
-        title.setObjectName("fieldLabel")
-        title.setAlignment(Qt.AlignmentFlag.AlignRight)
-        row = QHBoxLayout()
-        row.setDirection(QHBoxLayout.Direction.RightToLeft)
-        row.setSpacing(10)
-        separator = QLabel("تا")
-        separator.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        row.addWidget(self.start_date_input, stretch=1)
-        row.addWidget(separator)
-        row.addWidget(self.end_date_input, stretch=1)
-        layout.addWidget(title)
-        layout.addLayout(row)
-        return box
-
-    def _table_card(self):
-        card = self.card()
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(18, 16, 18, 16)
-        title = QLabel("نتایج گزارش")
-        title.setObjectName("sectionTitle")
+    def _table_card(self) -> QFrame:
+        card, layout = self._build_themed_card("نتایج گزارش")
         self.table = QTableWidget(0, 9)
+        self.table.setObjectName("missionsTable")
         self.table.setHorizontalHeaderLabels(
             ["ردیف", "تاریخ", "ساعت", "راننده", "خودرو", "مبدا", "مقصد نهایی", "مسافت", "حق‌الزحمه"]
         )
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.table.horizontalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
         self.table.verticalHeader().setVisible(False)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        layout.addWidget(title)
-        layout.addWidget(self.table)
+        self.table.setAlternatingRowColors(True)
+        self.table.setShowGrid(False)
+        self.table.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        layout.addWidget(self.table, stretch=1)
         return card
 
-    def _totals_card(self):
+    def _report_total_card(self, title: str, value: str) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("reportsTotalCard")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(18, 16, 18, 16)
+        layout.setSpacing(8)
+        layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+
+        title_label = QLabel(title)
+        title_label.setObjectName("reportsTotalTitle")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        value_label = QLabel(to_persian_digits(value))
+        value_label.setObjectName("reportsTotalValue")
+        value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        bar = QFrame()
+        bar.setObjectName("reportsTotalBar")
+        bar.setFixedSize(96, 4)
+        bar_row = QHBoxLayout()
+        bar_row.setContentsMargins(0, 0, 0, 0)
+        bar_row.addStretch(1)
+        bar_row.addWidget(bar)
+        bar_row.addStretch(1)
+
+        layout.addWidget(title_label, alignment=Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(value_label, alignment=Qt.AlignmentFlag.AlignHCenter)
+        layout.addLayout(bar_row)
+        return frame
+
+    def _totals_card(self) -> QFrame:
         card = self.card()
         layout = QHBoxLayout(card)
         layout.setContentsMargins(18, 16, 18, 16)
         layout.setSpacing(12)
-        self.distance_total_card = make_stat_card("مسافت کل", "۰.۰", PRIMARY_COLOR)
-        self.fee_total_card = make_stat_card("حق‌الزحمه راننده", "۰ ریال", SUCCESS_COLOR)
+        self.distance_total_card = self._report_total_card("مسافت کل", "۰.۰")
+        self.fee_total_card = self._report_total_card("حق‌الزحمه راننده", "۰ ریال")
         layout.addWidget(self.distance_total_card)
         layout.addWidget(self.fee_total_card)
         return card
@@ -219,8 +311,8 @@ class ReportsPage(Page):
         self.distance_total_card.deleteLater()
         self.fee_total_card.deleteLater()
         parent_layout = self.root_layout.itemAt(self.root_layout.count() - 1).widget().layout()
-        self.distance_total_card = make_stat_card("مسافت کل", to_persian_digits(f"{self.total_distance:.1f}"), PRIMARY_COLOR)
-        self.fee_total_card = make_stat_card("حق‌الزحمه راننده", self._format_rial(self.total_fee), SUCCESS_COLOR)
+        self.distance_total_card = self._report_total_card("مسافت کل", to_persian_digits(f"{self.total_distance:.1f}"))
+        self.fee_total_card = self._report_total_card("حق‌الزحمه راننده", self._format_rial(self.total_fee))
         parent_layout.addWidget(self.distance_total_card)
         parent_layout.addWidget(self.fee_total_card)
 

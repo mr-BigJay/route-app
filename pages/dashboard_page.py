@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
     QHeaderView,
+    QLabel,
     QMessageBox,
     QPushButton,
     QScrollArea,
@@ -73,24 +74,46 @@ class DashboardPage(Page):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
+        header = QFrame()
+        header.setObjectName("missionsTableHeader")
+        header_layout = QVBoxLayout(header)
+        header_layout.setContentsMargins(18, 16, 18, 14)
+        header_layout.setSpacing(4)
+        title = QLabel("آخرین فعالیت‌ها")
+        title.setObjectName("missionsTableTitle")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle = QLabel("ماموریت‌های اخیر و رزروهای ثبت‌شده")
+        subtitle.setObjectName("missionsTableSubtitle")
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header_layout.addWidget(title)
+        header_layout.addWidget(subtitle)
+
+        body = QFrame()
+        body.setObjectName("missionsTableWrap")
+        body_layout = QVBoxLayout(body)
+        body_layout.setContentsMargins(14, 14, 14, 14)
+        body_layout.setSpacing(0)
+
         self.tables_tabs = QTabWidget()
         self.tables_tabs.setObjectName("dashboardTablesTabs")
         self.tables_tabs.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
 
         missions_tab = QWidget()
         missions_layout = QVBoxLayout(missions_tab)
-        missions_layout.setContentsMargins(18, 12, 18, 16)
+        missions_layout.setContentsMargins(0, 0, 0, 0)
         missions_layout.addWidget(self.missions_table)
 
         reservations_tab = QWidget()
         reservations_layout = QVBoxLayout(reservations_tab)
-        reservations_layout.setContentsMargins(18, 12, 18, 16)
+        reservations_layout.setContentsMargins(0, 0, 0, 0)
         reservations_layout.addWidget(self.reservations_table)
 
         self.tables_tabs.addTab(missions_tab, "ماموریت‌های اخیر")
         self.tables_tabs.addTab(reservations_tab, "رزرو ماموریت")
         self.tables_tabs.setCurrentIndex(0)
-        layout.addWidget(self.tables_tabs)
+        body_layout.addWidget(self.tables_tabs)
+        layout.addWidget(header)
+        layout.addWidget(body, stretch=1)
         return card
 
     def _center_page_header(self) -> None:
@@ -117,6 +140,7 @@ class DashboardPage(Page):
         table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         table.setAlternatingRowColors(True)
+        table.setShowGrid(False)
         return table
 
     def _build_mission_overlay(self) -> None:
@@ -178,8 +202,8 @@ class DashboardPage(Page):
     def _resize_mission_modal(self) -> None:
         if not hasattr(self, "mission_card"):
             return
-        card_width = min(980, max(880, int(self.width() * 0.74)))
-        card_height = min(780, max(660, int(self.height() * 0.84)))
+        card_width = min(1100, max(920, int(self.width() * 0.72)))
+        card_height = min(720, max(580, int(self.height() * 0.78)))
         self.mission_card.setFixedWidth(card_width)
         self.mission_scroll.setMinimumHeight(card_height)
 
