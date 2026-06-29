@@ -7,6 +7,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QFontDatabase
 from PySide6.QtWidgets import (
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QMessageBox,
@@ -122,7 +123,7 @@ def confirm(parent: QWidget, message: str) -> bool:
     return answer == QMessageBox.StandardButton.Yes
 
 
-def clear_layout(layout: QVBoxLayout | QHBoxLayout) -> None:
+def clear_layout(layout: QVBoxLayout | QHBoxLayout | QGridLayout) -> None:
     while layout.count():
         item = layout.takeAt(0)
         widget = item.widget()

@@ -85,6 +85,7 @@ class MissionFormWidget(QWidget):
         self.origin_category_combo.currentIndexChanged.connect(
             lambda: self._populate_location_combo(self.origin_category_combo, self.origin_location_combo)
         )
+        self.origin_location_combo.currentIndexChanged.connect(self._try_fill_distance_from_cache)
         origin_group = QGroupBox("مبدا")
         origin_group.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         origin_layout = QVBoxLayout(origin_group)
@@ -260,6 +261,7 @@ class MissionFormWidget(QWidget):
         category_combo.currentIndexChanged.connect(
             lambda: self._populate_location_combo(category_combo, location_combo)
         )
+        location_combo.currentIndexChanged.connect(self._try_fill_distance_from_cache)
         self._populate_category_combo(category_combo)
         if selected_category_id is not None:
             index = category_combo.findData(selected_category_id)
@@ -303,6 +305,25 @@ class MissionFormWidget(QWidget):
                     button.setEnabled(not single_row)
                 elif button.text() == "+":
                     button.setEnabled(not at_limit)
+
+    def _combo_location_id(self, category_combo: QComboBox, location_combo: QComboBox) -> int | None:
+        category_id = category_combo.currentData()
+        title = location_combo.currentText().strip()
+        if category_id is None or not title:
+            return None
+        return self.db.find_location_id(int(category_id), title)
+
+    def _try_fill_distance_from_cache(self) -> None:
+        origin_id = self._combo_location_id(self.origin_category_combo, self.origin_location_combo)
+        if not self.destination_rows:
+            return
+        _, dest_category_combo, dest_location_combo = self.destination_rows[0]
+        destination_id = self._combo_location_id(dest_category_combo, dest_location_combo)
+        if not origin_id or not destination_id or origin_id == destination_id:
+            return
+        cached = self.db.get_cached_route(origin_id, destination_id)
+        if cached:
+            self.distance_input.setValue(float(cached["distance_km"]))
 
     def prepare_new(self) -> None:
         self.selected_id = None

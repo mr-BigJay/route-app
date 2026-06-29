@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+  <style>
+    html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; }
+    .leaflet-container { font-family: Tahoma, sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    const GILAN = [[36.95, 48.75], [37.75, 50.55]];
+    let bridge = null;
+    let map = null;
+    let markersLayer = null;
+    let routeLayer = null;
+
+    function initMap() {
+      map = L.map('map', { zoomControl: true }).fitBounds(GILAN);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; OpenStreetMap'
+      }).addTo(map);
+      markersLayer = L.layerGroup().addTo(map);
+      routeLayer = L.layerGroup().addTo(map);
+      map.on('click', function (e) {
+        if (bridge && bridge.mapClicked) {
+          bridge.mapClicked(e.latlng.lat, e.latlng.lng);
+        }
+      });
+    }
+
+    function setMarkers(jsonStr) {
+      if (!markersLayer) return;
+      markersLayer.clearLayers();
+      const items = JSON.parse(jsonStr || '[]');
+      items.forEach(function (m) {
+        const mk = L.marker([m.lat, m.lng]).addTo(markersLayer);
+        if (m.title) mk.bindPopup(m.title);
+      });
+    }
+
+    function drawRoute(jsonStr) {
+      if (!routeLayer) return;
+      routeLayer.clearLayers();
+      const pts = JSON.parse(jsonStr || '[]');
+      if (pts.length < 2) return;
+      const latlngs = pts.map(function (p) { return [p[0], p[1]]; });
+      L.polyline(latlngs, { color: '#2563eb', weight: 5, opacity: 0.85 }).addTo(routeLayer);
+      map.fitBounds(latlngs, { padding: [40, 40] });
+    }
+
+    function clearRoute() {
+      if (routeLayer) routeLayer.clearLayers();
+    }
+
+    new QWebChannel(qt.webChannelTransport, function (channel) {
+      bridge = channel.objects.bridge;
+      initMap();
+    });
+  </script>
+</body>
+</html>

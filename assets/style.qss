@@ -168,6 +168,49 @@ QWidget#driversPage QLabel#pageSubtitle {
     qproperty-alignment: AlignCenter;
 }
 
+QWidget#routesPage QLabel#pageTitle,
+QWidget#routesPage QLabel#pageSubtitle {
+    qproperty-alignment: AlignCenter;
+}
+
+QFrame#routeMapCard,
+QFrame#routePanelCard {
+    background: #FFFFFF;
+    border: 1px solid #BFDBFE;
+    border-radius: 18px;
+}
+
+QFrame#routeMapCard QLabel#sectionTitle,
+QFrame#routePanelCard QLabel#sectionTitle {
+    color: #1E3A8A;
+    font-size: 16px;
+    font-weight: 800;
+}
+
+QLabel#routeMapHint {
+    color: #64748B;
+    font-size: 12px;
+}
+
+QLabel#routeDistanceValue {
+    color: #0F172A;
+    font-size: 22px;
+    font-weight: 800;
+}
+
+QLabel#routeModeHint {
+    color: #2563EB;
+    font-size: 12px;
+}
+
+QWidget#routeMapWidget,
+QGraphicsView#routeMapCanvas,
+QWebEngineView#routeMapWeb {
+    border: 1px solid #DBEAFE;
+    border-radius: 14px;
+    background: #EFF6FF;
+}
+
 QFrame#card,
 QFrame#statCard {
     background: #FFFFFF;

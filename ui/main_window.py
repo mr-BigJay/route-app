@@ -22,6 +22,7 @@ from pages.drivers_page import DriversPage
 from pages.locations_page import LocationsPage
 from pages.missions_page import MissionsPage
 from pages.reports_page import ReportsPage
+from pages.routes_page import RoutesPage
 from ui.utils import (
     APP_VERSION,
     current_time_text,
@@ -46,6 +47,7 @@ class MainWindow(QMainWindow):
             DashboardPage(self.db),
             DriversPage(self.db),
             LocationsPage(self.db),
+            RoutesPage(self.db),
             MissionsPage(self.db),
             ReportsPage(self.db),
         ]
@@ -101,6 +103,7 @@ class MainWindow(QMainWindow):
             ("داشبورد", icons_dir / "nav_1.svg"),
             ("مدیریت رانندگان", icons_dir / "nav_2.svg"),
             ("مدیریت نقاط", icons_dir / "nav_3.svg"),
+            ("مدیریت مسیر", icons_dir / "nav_6.svg"),
             ("ماموریت‌ها", icons_dir / "nav_4.svg"),
             ("گزارشات", icons_dir / "nav_5.svg"),
         ]

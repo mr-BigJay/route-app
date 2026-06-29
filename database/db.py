@@ -93,6 +93,7 @@ class DatabaseManager:
             )
         self._ensure_driver_columns()
         self._ensure_category_location_columns()
+        self._ensure_route_tables()
         self.seed_defaults()
 
     def _ensure_category_location_columns(self) -> None:
@@ -110,6 +111,10 @@ class DatabaseManager:
             }
             if "sort_order" not in location_columns:
                 conn.execute("ALTER TABLE locations ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0")
+            if "latitude" not in location_columns:
+                conn.execute("ALTER TABLE locations ADD COLUMN latitude REAL")
+            if "longitude" not in location_columns:
+                conn.execute("ALTER TABLE locations ADD COLUMN longitude REAL")
 
             conn.execute(
                 """
@@ -248,6 +253,23 @@ class DatabaseManager:
                     (first_name, last_name, row["id"]),
                 )
 
+    def _ensure_route_tables(self) -> None:
+        with self.connection() as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS route_cache (
+                    origin_location_id INTEGER NOT NULL,
+                    destination_location_id INTEGER NOT NULL,
+                    distance_km REAL NOT NULL,
+                    route_points TEXT NOT NULL DEFAULT '[]',
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (origin_location_id, destination_location_id),
+                    FOREIGN KEY (origin_location_id) REFERENCES locations (id) ON DELETE CASCADE,
+                    FOREIGN KEY (destination_location_id) REFERENCES locations (id) ON DELETE CASCADE
+                )
+                """
+            )
+
     def seed_defaults(self) -> None:
         default_drivers = [
             {"first_name": "علی", "last_name": "محمدی"},
@@ -307,6 +329,35 @@ class DatabaseManager:
                         """,
                         (category_id, title),
                     )
+            self._seed_sample_coordinates(conn)
+
+    def _seed_sample_coordinates(self, conn: sqlite3.Connection) -> None:
+        sample_coords = {
+            "شبکه بهداشت": (37.1360, 50.2905),
+            "بیمارستان رودسر": (37.1375, 50.2880),
+            "مرکز رحیم آباد": (37.1372, 50.2938),
+            "مرکز واجارگاه": (37.0891, 50.4562),
+            "مرکز کلاچای": (37.0750, 50.3850),
+        }
+        for title, (latitude, longitude) in sample_coords.items():
+            conn.execute(
+                """
+                UPDATE locations
+                SET latitude = ?, longitude = ?
+                WHERE title = ? AND latitude IS NULL
+                """,
+                (latitude, longitude, title),
+            )
+
+    def find_location_id(self, category_id: int, title: str) -> int | None:
+        row = self.fetch_one(
+            """
+            SELECT id FROM locations
+            WHERE category_id = ? AND title = ?
+            """,
+            (category_id, title.strip()),
+        )
+        return int(row["id"]) if row else None
 
     def fetch_all(self, query: str, params: tuple[Any, ...] = ()) -> list[dict[str, Any]]:
         with self.connection() as conn:
@@ -505,7 +556,7 @@ class DatabaseManager:
         return self.fetch_all(
             """
             SELECT locations.id, locations.category_id, locations.title,
-                   locations.sort_order,
+                   locations.sort_order, locations.latitude, locations.longitude,
                    categories.title AS category_title,
                    categories.sort_order AS category_sort_order
             FROM locations
@@ -513,6 +564,75 @@ class DatabaseManager:
             ORDER BY categories.sort_order, locations.sort_order, locations.title
             """
         )
+
+    def get_location(self, location_id: int) -> dict[str, Any] | None:
+        return self.fetch_one(
+            """
+            SELECT locations.id, locations.category_id, locations.title,
+                   locations.sort_order, locations.latitude, locations.longitude,
+                   categories.title AS category_title
+            FROM locations
+            JOIN categories ON categories.id = locations.category_id
+            WHERE locations.id = ?
+            """,
+            (location_id,),
+        )
+
+    def update_location_coordinates(self, location_id: int, latitude: float, longitude: float) -> None:
+        self.execute(
+            "UPDATE locations SET latitude = ?, longitude = ? WHERE id = ?",
+            (latitude, longitude, location_id),
+        )
+
+    def list_mapped_locations(self) -> list[dict[str, Any]]:
+        return self.fetch_all(
+            """
+            SELECT locations.id, locations.category_id, locations.title,
+                   locations.latitude, locations.longitude,
+                   categories.title AS category_title
+            FROM locations
+            JOIN categories ON categories.id = locations.category_id
+            WHERE locations.latitude IS NOT NULL
+              AND locations.longitude IS NOT NULL
+            ORDER BY categories.sort_order, locations.sort_order, locations.title
+            """
+        )
+
+    def get_cached_route(self, origin_location_id: int, destination_location_id: int) -> dict[str, Any] | None:
+        return self.fetch_one(
+            """
+            SELECT origin_location_id, destination_location_id, distance_km, route_points
+            FROM route_cache
+            WHERE origin_location_id = ? AND destination_location_id = ?
+            """,
+            (origin_location_id, destination_location_id),
+        )
+
+    def save_route_cache(
+        self,
+        origin_location_id: int,
+        destination_location_id: int,
+        distance_km: float,
+        route_points: str,
+    ) -> None:
+        self.execute(
+            """
+            INSERT INTO route_cache (
+                origin_location_id, destination_location_id, distance_km, route_points
+            )
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(origin_location_id, destination_location_id)
+            DO UPDATE SET
+                distance_km = excluded.distance_km,
+                route_points = excluded.route_points,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (origin_location_id, destination_location_id, distance_km, route_points),
+        )
+
+    def count_cached_routes(self) -> int:
+        row = self.fetch_one("SELECT COUNT(*) AS total FROM route_cache")
+        return int(row["total"]) if row else 0
 
     def add_location(self, category_id: int, title: str) -> int:
         return self.execute(
